@@ -1,0 +1,148 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" width="100%" height="100%">
+  <defs>
+    <!-- Glow filter for cracks and embers -->
+    <filter id="neonBlueGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="8" result="blur1"/>
+      <feGaussianBlur stdDeviation="20" result="blur2"/>
+      <feMerge>
+        <feMergeNode in="blur2"/>
+        <feMergeNode in="blur1"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <filter id="softFlameGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="30"/>
+    </filter>
+
+    <!-- Blue Flame Nebulae Gradients -->
+    <radialGradient id="flameCenter" cx="50%" cy="40%" r="50%">
+      <stop offset="0%" stop-color="#00a8ff" stop-opacity="0.35"/>
+      <stop offset="45%" stop-color="#0044cc" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#02040b" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="flameBottom" cx="50%" cy="92%" r="60%">
+      <stop offset="0%" stop-color="#00f0ff" stop-opacity="0.45"/>
+      <stop offset="30%" stop-color="#0066ff" stop-opacity="0.3"/>
+      <stop offset="70%" stop-color="#001a4d" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#02040b" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="flameTop" cx="50%" cy="5%" r="50%">
+      <stop offset="0%" stop-color="#00d2ff" stop-opacity="0.32"/>
+      <stop offset="40%" stop-color="#0044cc" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#02040b" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Blue Fire Tongues Gradients -->
+    <linearGradient id="fireRise1" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#00f5ff" stop-opacity="0.6"/>
+      <stop offset="35%" stop-color="#0084ff" stop-opacity="0.35"/>
+      <stop offset="75%" stop-color="#0033aa" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="#02040b" stop-opacity="0"/>
+    </linearGradient>
+
+    <linearGradient id="fireRise2" x1="0%" y1="100%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.5"/>
+      <stop offset="40%" stop-color="#0052cc" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#02040b" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 1. Deep Space Pitch Black Base -->
+  <rect width="1080" height="1920" fill="#02040b"/>
+
+  <!-- 2. Cosmic Blue Nebulae -->
+  <rect width="1080" height="1920" fill="url(#flameCenter)"/>
+  <rect width="1080" height="1920" fill="url(#flameBottom)"/>
+  <rect width="1080" height="1920" fill="url(#flameTop)"/>
+
+  <!-- 3. Rising Blue Flames at Bottom & Corners -->
+  <g filter="url(#softFlameGlow)">
+    <path d="M -50,1920 Q 80,1480 200,1650 T 400,1380 T 600,1620 T 780,1360 T 960,1600 T 1130,1420 L 1130,1920 Z" fill="url(#fireRise1)"/>
+    <path d="M -30,1920 Q 140,1580 280,1720 T 480,1460 T 680,1690 T 880,1440 T 1110,1680 L 1110,1920 Z" fill="url(#fireRise2)"/>
+    <!-- Top-corner blue mana flames -->
+    <path d="M 0,0 Q 180,120 120,280 T 260,380 T 80,560 L 0,600 Z" fill="url(#fireRise2)" opacity="0.4"/>
+    <path d="M 1080,0 Q 900,140 960,300 T 820,400 T 1000,580 L 1080,620 Z" fill="url(#fireRise2)" opacity="0.4"/>
+  </g>
+
+  <!-- 4. Cracked Blue Magma / Lightning Fractures (Solo Leveling System style) -->
+  <g filter="url(#neonBlueGlow)">
+    <!-- Branch Network 1 (Center-Left spreading to top and right) -->
+    <path d="M 120,950 L 180,890 L 260,910 L 320,830 L 410,850 L 490,780 L 560,820 L 670,740 L 750,770 L 840,680 L 920,710 L 990,620" fill="none" stroke="#0044ff" stroke-width="12" stroke-linecap="round" opacity="0.45"/>
+    <path d="M 120,950 L 180,890 L 260,910 L 320,830 L 410,850 L 490,780 L 560,820 L 670,740 L 750,770 L 840,680 L 920,710 L 990,620" fill="none" stroke="#00d2ff" stroke-width="4.5" stroke-linecap="round" opacity="0.85"/>
+    <path d="M 120,950 L 180,890 L 260,910 L 320,830 L 410,850 L 490,780 L 560,820 L 670,740 L 750,770 L 840,680 L 920,710 L 990,620" fill="none" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" opacity="0.95"/>
+
+    <!-- Fork 1A (Branching upwards from center) -->
+    <path d="M 490,780 L 470,690 L 530,620 L 510,530 L 580,440 L 650,380 L 620,290 L 710,210 L 770,120" fill="none" stroke="#0044ff" stroke-width="9" stroke-linecap="round" opacity="0.4"/>
+    <path d="M 490,780 L 470,690 L 530,620 L 510,530 L 580,440 L 650,380 L 620,290 L 710,210 L 770,120" fill="none" stroke="#00d2ff" stroke-width="3.5" stroke-linecap="round" opacity="0.85"/>
+    <path d="M 490,780 L 470,690 L 530,620 L 510,530 L 580,440 L 650,380 L 620,290 L 710,210 L 770,120" fill="none" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round" opacity="0.95"/>
+
+    <!-- Fork 1B (Branching downwards) -->
+    <path d="M 320,830 L 350,920 L 290,1010 L 330,1110 L 280,1200 L 340,1310 L 300,1420 L 360,1540 L 320,1670" fill="none" stroke="#0044ff" stroke-width="9" stroke-linecap="round" opacity="0.4"/>
+    <path d="M 320,830 L 350,920 L 290,1010 L 330,1110 L 280,1200 L 340,1310 L 300,1420 L 360,1540 L 320,1670" fill="none" stroke="#00d2ff" stroke-width="3.5" stroke-linecap="round" opacity="0.85"/>
+    <path d="M 320,830 L 350,920 L 290,1010 L 330,1110 L 280,1200 L 340,1310 L 300,1420 L 360,1540 L 320,1670" fill="none" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round" opacity="0.95"/>
+
+    <!-- Branch Network 2 (Right side cracks branching down and left) -->
+    <path d="M 980,1120 L 890,1160 L 830,1100 L 740,1140 L 680,1220 L 590,1250 L 530,1330 L 450,1360 L 390,1460 L 310,1500" fill="none" stroke="#0044ff" stroke-width="11" stroke-linecap="round" opacity="0.45"/>
+    <path d="M 980,1120 L 890,1160 L 830,1100 L 740,1140 L 680,1220 L 590,1250 L 530,1330 L 450,1360 L 390,1460 L 310,1500" fill="none" stroke="#00d2ff" stroke-width="4.2" stroke-linecap="round" opacity="0.85"/>
+    <path d="M 980,1120 L 890,1160 L 830,1100 L 740,1140 L 680,1220 L 590,1250 L 530,1330 L 450,1360 L 390,1460 L 310,1500" fill="none" stroke="#ffffff" stroke-width="1.6" stroke-linecap="round" opacity="0.95"/>
+
+    <!-- Fork 2A (Spreading towards bottom right) -->
+    <path d="M 680,1220 L 720,1310 L 790,1380 L 760,1490 L 820,1580 L 800,1700 L 870,1810" fill="none" stroke="#0044ff" stroke-width="8" stroke-linecap="round" opacity="0.4"/>
+    <path d="M 680,1220 L 720,1310 L 790,1380 L 760,1490 L 820,1580 L 800,1700 L 870,1810" fill="none" stroke="#00d2ff" stroke-width="3" stroke-linecap="round" opacity="0.85"/>
+    <path d="M 680,1220 L 720,1310 L 790,1380 L 760,1490 L 820,1580 L 800,1700 L 870,1810" fill="none" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round" opacity="0.95"/>
+
+    <!-- Branch Network 3 (Top-left cracks) -->
+    <path d="M 60,220 L 140,250 L 190,320 L 280,310 L 350,390 L 430,370 L 490,460 L 570,480" fill="none" stroke="#0044ff" stroke-width="8" stroke-linecap="round" opacity="0.4"/>
+    <path d="M 60,220 L 140,250 L 190,320 L 280,310 L 350,390 L 430,370 L 490,460 L 570,480" fill="none" stroke="#00d2ff" stroke-width="3" stroke-linecap="round" opacity="0.85"/>
+    <path d="M 60,220 L 140,250 L 190,320 L 280,310 L 350,390 L 430,370 L 490,460 L 570,480" fill="none" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round" opacity="0.95"/>
+
+    <!-- Fork 3A -->
+    <path d="M 280,310 L 260,210 L 330,140 L 380,60" fill="none" stroke="#0044ff" stroke-width="7" stroke-linecap="round" opacity="0.35"/>
+    <path d="M 280,310 L 260,210 L 330,140 L 380,60" fill="none" stroke="#00d2ff" stroke-width="2.5" stroke-linecap="round" opacity="0.8"/>
+    <path d="M 280,310 L 260,210 L 330,140 L 380,60" fill="none" stroke="#ffffff" stroke-width="1" stroke-linecap="round" opacity="0.9"/>
+
+    <!-- Branch Network 4 (Top-right cracks) -->
+    <path d="M 1020,240 L 930,280 L 880,360 L 790,380 L 730,460 L 680,540" fill="none" stroke="#0044ff" stroke-width="8" stroke-linecap="round" opacity="0.35"/>
+    <path d="M 1020,240 L 930,280 L 880,360 L 790,380 L 730,460 L 680,540" fill="none" stroke="#00d2ff" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+    <path d="M 1020,240 L 930,280 L 880,360 L 790,380 L 730,460 L 680,540" fill="none" stroke="#ffffff" stroke-width="1.1" stroke-linecap="round" opacity="0.9"/>
+  </g>
+
+  <!-- 5. Floating Glowing Blue Sparks / Embers (Solo Leveling blue flames atmosphere) -->
+  <g filter="url(#neonBlueGlow)">
+    <circle cx="210" cy="850" r="3.5" fill="#00f0ff" opacity="0.9"/>
+    <circle cx="340" cy="790" r="2.5" fill="#ffffff" opacity="0.95"/>
+    <circle cx="480" cy="740" r="4.0" fill="#38bdf8" opacity="0.85"/>
+    <circle cx="620" cy="710" r="3.0" fill="#00e5ff" opacity="0.9"/>
+    <circle cx="780" cy="650" r="3.5" fill="#ffffff" opacity="0.95"/>
+    <circle cx="890" cy="630" r="2.5" fill="#38bdf8" opacity="0.85"/>
+    <circle cx="530" cy="580" r="3.2" fill="#00f0ff" opacity="0.9"/>
+    <circle cx="610" cy="420" r="2.8" fill="#ffffff" opacity="0.9"/>
+    <circle cx="680" cy="270" r="3.5" fill="#00e5ff" opacity="0.9"/>
+    <circle cx="730" cy="180" r="2.5" fill="#38bdf8" opacity="0.85"/>
+    <circle cx="310" cy="980" r="3.0" fill="#00f0ff" opacity="0.85"/>
+    <circle cx="270" cy="1160" r="3.8" fill="#ffffff" opacity="0.95"/>
+    <circle cx="320" cy="1380" r="2.8" fill="#38bdf8" opacity="0.9"/>
+    <circle cx="340" cy="1580" r="4.2" fill="#00f0ff" opacity="0.95"/>
+    <circle cx="710" cy="1190" r="3.0" fill="#38bdf8" opacity="0.85"/>
+    <circle cx="580" cy="1280" r="3.5" fill="#ffffff" opacity="0.95"/>
+    <circle cx="430" cy="1410" r="3.0" fill="#00e5ff" opacity="0.9"/>
+    <circle cx="750" cy="1440" r="3.2" fill="#38bdf8" opacity="0.85"/>
+    <circle cx="800" cy="1620" r="3.8" fill="#00f0ff" opacity="0.95"/>
+    <circle cx="840" cy="1760" r="4.5" fill="#ffffff" opacity="0.95"/>
+    <circle cx="150" cy="380" r="2.5" fill="#00e5ff" opacity="0.85"/>
+    <circle cx="260" cy="280" r="3.0" fill="#ffffff" opacity="0.9"/>
+    <circle cx="860" cy="330" r="2.8" fill="#38bdf8" opacity="0.85"/>
+    <circle cx="940" cy="220" r="3.5" fill="#00f0ff" opacity="0.9"/>
+    <circle cx="540" cy="1650" r="4.0" fill="#00e5ff" opacity="0.9"/>
+    <circle cx="660" cy="1720" r="3.5" fill="#ffffff" opacity="0.95"/>
+    <circle cx="420" cy="1750" r="4.2" fill="#38bdf8" opacity="0.9"/>
+    <circle cx="160" cy="1720" r="3.8" fill="#00f0ff" opacity="0.85"/>
+    <circle cx="920" cy="1680" r="3.5" fill="#ffffff" opacity="0.9"/>
+    <circle cx="100" cy="1480" r="2.8" fill="#00e5ff" opacity="0.8"/>
+    <circle cx="980" cy="1420" r="3.0" fill="#38bdf8" opacity="0.85"/>
+    <circle cx="500" cy="220" r="3.2" fill="#00f0ff" opacity="0.9"/>
+  </g>
+</svg>

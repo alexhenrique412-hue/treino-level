@@ -1606,7 +1606,11 @@ function applyTheme(themeName) {
 
 function openThemeModal() {
   triggerHaptic('light');
-  applyTheme(STATE.user.theme || 'green');
+  // Define o novo tema Fogo Azul & Preto (Solo Leveling) como padrão
+  if (!STATE.user.theme || STATE.user.theme === 'green') {
+    STATE.user.theme = 'shadow';
+  }
+  applyTheme(STATE.user.theme);
   document.getElementById('themeModal').classList.add('open');
 }
 
@@ -2617,7 +2621,11 @@ function renderAll() {
 window.addEventListener("DOMContentLoaded", () => {
   loadState();
   updateCachedUserPhoto();
-  applyTheme(STATE.user.theme || 'green');
+  // Define o novo tema Fogo Azul & Preto (Solo Leveling) como padrão
+  if (!STATE.user.theme || STATE.user.theme === 'green') {
+    STATE.user.theme = 'shadow';
+  }
+  applyTheme(STATE.user.theme);
   checkDateTurnover();
   checkStandaloneMode();
   STATE.activeDayIndex = getCurrentDayOfWeekIndex();
