@@ -1589,7 +1589,7 @@ function applyTheme(themeName) {
   STATE.user.theme = themeName || 'green';
   document.body.dataset.theme = (themeName === 'green' || !themeName) ? '' : themeName;
 
-  const themeIds = ['green', 'orange', 'purple', 'red', 'blue', 'gold'];
+  const themeIds = ['green', 'orange', 'purple', 'red', 'blue', 'gold', 'shadow'];
   themeIds.forEach(t => {
     const card = document.getElementById(`theme-card-${t}`);
     if (card) {
