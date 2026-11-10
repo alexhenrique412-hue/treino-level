@@ -457,48 +457,33 @@
   <div class="modal-backdrop" id="profileModal">
     <div class="modal-box">
       <div class="modal-header">
-        <h3 style="display: flex; align-items: center; gap: 8px;">
-          <span>👤</span> Meu Perfil de Treino
-        </h3>
+        <h3>Meu Perfil de Treino</h3>
         <button class="btn-icon" onclick="closeProfileModal()">✕</button>
       </div>
       <form id="profileForm" onsubmit="handleSaveProfile(event)">
-        
-        <!-- Foto / Imagem de Perfil -->
-        <div class="profile-photo-section">
-          <div class="profile-avatar-wrap" onclick="document.getElementById('profilePhotoInput').click()" title="Toque para mudar a foto">
+        <!-- Photo Selector -->
+        <div class="profile-photo-container">
+          <div class="profile-avatar-wrapper" onclick="triggerProfilePhotoInput()">
             <div class="profile-avatar-preview" id="modalAvatarPreview">
-              <span id="modalAvatarChar">A</span>
+              <span id="modalAvatarLetter">G</span>
             </div>
-            <div class="profile-avatar-badge-btn" title="Escolher Foto">📷</div>
+            <div class="profile-photo-badge" title="Mudar foto">📷</div>
           </div>
-
-          <input type="file" id="profilePhotoInput" accept="image/*" style="display: none;" onchange="handleProfilePhotoSelected(event)">
-
-          <div style="display: flex; gap: 8px; width: 100%; justify-content: center;">
-            <button type="button" class="btn btn-outline" style="padding: 6px 14px; font-size: 0.78rem;" onclick="document.getElementById('profilePhotoInput').click()">
-              📁 Carregar Foto da Galeria
+          <div class="profile-photo-actions">
+            <button type="button" class="btn btn-outline" style="padding: 5px 12px; font-size: 0.75rem;" onclick="triggerProfilePhotoInput()">
+              📷 Escolher Foto / Imagem
             </button>
-            <button type="button" class="btn btn-danger" id="btnRemovePhoto" style="padding: 6px 10px; font-size: 0.78rem; display: none;" onclick="removeProfilePhoto()" title="Remover Foto">
-              ✕
+            <button type="button" class="btn btn-outline" id="btnRemovePhoto" style="padding: 5px 10px; font-size: 0.75rem; color: var(--accent-red); border-color: rgba(239,68,68,0.3); display: none;" onclick="removeProfilePhoto()">
+              ✕ Remover
             </button>
           </div>
-
-          <div class="avatar-presets-title">Ou escolha um avatar temático:</div>
-          <div class="avatar-presets-row">
-            <button type="button" class="preset-avatar-btn" onclick="selectPresetAvatar('🥋')" title="Samurai">🥋</button>
-            <button type="button" class="preset-avatar-btn" onclick="selectPresetAvatar('🦁')" title="Leão">🦁</button>
-            <button type="button" class="preset-avatar-btn" onclick="selectPresetAvatar('🦍')" title="Gorila">🦍</button>
-            <button type="button" class="preset-avatar-btn" onclick="selectPresetAvatar('🦾')" title="Ciborgue">🦾</button>
-            <button type="button" class="preset-avatar-btn" onclick="selectPresetAvatar('⚡')" title="Raio">⚡</button>
-            <button type="button" class="preset-avatar-btn" onclick="selectPresetAvatar('🐺')" title="Lobo">🐺</button>
-            <button type="button" class="preset-avatar-btn" onclick="selectPresetAvatar('👑')" title="Lenda">👑</button>
-          </div>
+          <input type="file" id="profilePhotoInput" accept="image/*" style="display: none;" onchange="handlePhotoSelected(event)">
+          <small style="color: var(--text-dark); font-size: 0.68rem;">Dica: Toque na foto ou no botão para escolher da galeria</small>
         </div>
 
         <div class="form-group">
           <label>Seu Nome / Apelido</label>
-          <input type="text" id="profileNameInput" required value="Guerreiro" oninput="handleProfileNameChange()">
+          <input type="text" id="profileNameInput" required value="Guerreiro" oninput="updateModalAvatarLetter()">
         </div>
         <div class="form-group">
           <label>Meta Principal</label>

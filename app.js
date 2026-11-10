@@ -188,8 +188,8 @@ const STATE = {
     name: "Guerreiro",
     goal: "Hipertrofia",
     avatar: "G",
-    theme: "green",
-    photo: null
+    photo: null,
+    theme: "green"
   },
   // All-time totals:
   totalMinutes: 0, // Minutes trained (2h = 120min = 1 point)
@@ -880,85 +880,113 @@ function closeAboutModal() {
   document.getElementById("aboutModal").classList.remove("open");
 }
 
-// --- PROFILE MODAL & PHOTO UPLOAD ---
+// --- PROFILE PHOTO & MODAL LOGIC ---
 let tempProfilePhoto = null;
+let cachedUserPhotoImg = null;
 
-function handleProfilePhotoSelected(e) {
-  const file = e.target.files && e.target.files[0];
+function updateCachedUserPhoto() {
+  if (STATE.user && STATE.user.photo) {
+    cachedUserPhotoImg = new Image();
+    cachedUserPhotoImg.src = STATE.user.photo;
+  } else {
+    cachedUserPhotoImg = null;
+  }
+}
+
+function triggerProfilePhotoInput() {
+  triggerHaptic('light');
+  const input = document.getElementById('profilePhotoInput');
+  if (input) input.click();
+}
+
+function updateModalAvatarLetter() {
+  const nameInput = document.getElementById("profileNameInput");
+  const letterEl = document.getElementById("modalAvatarLetter");
+  if (letterEl && !tempProfilePhoto) {
+    const letter = (nameInput.value.trim().charAt(0) || "G").toUpperCase();
+    letterEl.innerText = letter;
+  }
+}
+
+function handlePhotoSelected(event) {
+  const file = event.target.files && event.target.files[0];
   if (!file) return;
 
+  if (!file.type.startsWith('image/')) {
+    alert("Por favor, selecione um arquivo de imagem válido.");
+    return;
+  }
+
   const reader = new FileReader();
-  reader.onload = function(evt) {
+  reader.onload = function(e) {
     const img = new Image();
     img.onload = function() {
-      // Crop square and resize to 256x256 for fast local storage
-      const canvas = document.createElement("canvas");
+      // Redimensiona para max 256x256 mantendo qualidade e economizando espaço no navegador
       const maxDim = 256;
-      const minSide = Math.min(img.width, img.height);
-      const startX = (img.width - minSide) / 2;
-      const startY = (img.height - minSide) / 2;
+      let width = img.width;
+      let height = img.height;
 
-      canvas.width = maxDim;
-      canvas.height = maxDim;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, startX, startY, minSide, minSide, 0, 0, maxDim, maxDim);
+      if (width > height) {
+        if (width > maxDim) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        }
+      } else {
+        if (height > maxDim) {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+      }
 
-      tempProfilePhoto = canvas.toDataURL("image/jpeg", 0.85);
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+
+      tempProfilePhoto = canvas.toDataURL('image/jpeg', 0.85);
       renderModalAvatarPreview();
-      triggerHaptic("success");
+      triggerHaptic('success');
     };
-    img.src = evt.target.result;
+    img.src = e.target.result;
   };
   reader.readAsDataURL(file);
 }
 
 function removeProfilePhoto() {
-  tempProfilePhoto = "";
+  triggerHaptic('light');
+  tempProfilePhoto = null;
+  const input = document.getElementById('profilePhotoInput');
+  if (input) input.value = '';
   renderModalAvatarPreview();
-  triggerHaptic("light");
-}
-
-function selectPresetAvatar(emoji) {
-  tempProfilePhoto = emoji;
-  renderModalAvatarPreview();
-  triggerHaptic("light");
-}
-
-function handleProfileNameChange() {
-  const photo = tempProfilePhoto !== null ? tempProfilePhoto : (STATE.user.photo || "");
-  if (!photo || (!photo.startsWith("data:image") && photo.length > 4)) {
-    renderModalAvatarPreview();
-  }
 }
 
 function renderModalAvatarPreview() {
-  const preview = document.getElementById("modalAvatarPreview");
-  const btnRemove = document.getElementById("btnRemovePhoto");
-  const photo = tempProfilePhoto !== null ? tempProfilePhoto : (STATE.user.photo || "");
+  const preview = document.getElementById('modalAvatarPreview');
+  const removeBtn = document.getElementById('btnRemovePhoto');
+  const nameInput = document.getElementById("profileNameInput");
+  const currentLetter = (nameInput ? nameInput.value.trim().charAt(0) || "G" : "G").toUpperCase();
 
-  if (photo && photo.startsWith("data:image")) {
-    preview.innerHTML = `<img src="${photo}" alt="Foto de Perfil">`;
-    if (btnRemove) btnRemove.style.display = "inline-flex";
-  } else if (photo && photo.length <= 4 && photo !== "") {
-    preview.innerHTML = `<span style="font-size: 2.3rem;">${photo}</span>`;
-    if (btnRemove) btnRemove.style.display = "inline-flex";
+  if (tempProfilePhoto) {
+    preview.innerHTML = `<img src="${tempProfilePhoto}" alt="Foto de perfil">`;
+    if (removeBtn) removeBtn.style.display = 'inline-flex';
   } else {
-    const nameInput = document.getElementById("profileNameInput");
-    const name = (nameInput && nameInput.value.trim()) || STATE.user.name || "G";
-    preview.innerHTML = `<span>${name.charAt(0).toUpperCase()}</span>`;
-    if (btnRemove) btnRemove.style.display = "none";
+    preview.innerHTML = `<span id="modalAvatarLetter">${currentLetter}</span>`;
+    if (removeBtn) removeBtn.style.display = 'none';
   }
 }
 
 function openProfileModal() {
+  triggerHaptic('light');
+  tempProfilePhoto = STATE.user.photo || null;
   document.getElementById("profileNameInput").value = STATE.user.name;
   document.getElementById("profileGoalInput").value = STATE.user.goal;
-  tempProfilePhoto = STATE.user.photo || null;
   renderModalAvatarPreview();
   document.getElementById("profileModal").classList.add("open");
 }
 
 function closeProfileModal() {
+  triggerHaptic('light');
   tempProfilePhoto = null;
   document.getElementById("profileModal").classList.remove("open");
 }
@@ -969,22 +997,14 @@ function handleSaveProfile(e) {
   const goal = document.getElementById("profileGoalInput").value;
   STATE.user.name = name;
   STATE.user.goal = goal;
-
-  if (tempProfilePhoto !== null) {
-    STATE.user.photo = tempProfilePhoto;
-  }
-
-  if (STATE.user.photo && STATE.user.photo.length <= 4) {
-    STATE.user.avatar = STATE.user.photo;
-  } else {
-    STATE.user.avatar = name.charAt(0).toUpperCase();
-  }
-
+  STATE.user.avatar = name.charAt(0).toUpperCase();
+  STATE.user.photo = tempProfilePhoto;
+  updateCachedUserPhoto();
   saveState();
   closeProfileModal();
-  renderAll();
-  triggerHaptic("success");
+  triggerHaptic('success');
   sfx.playCheck();
+  renderAll();
 }
 
 // --- LEVEL UP CELEBRATION MODAL & CONFETTI ---
@@ -1078,17 +1098,11 @@ function switchTab(tabId) {
 // --- RENDER FUNCTIONS ---
 function renderHeader() {
   const avatarEl = document.getElementById("headerAvatar");
-  const photo = STATE.user.photo;
-
-  if (photo && photo.startsWith("data:image")) {
-    avatarEl.innerHTML = `<img src="${photo}" alt="Foto" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;">`;
-  } else if (photo && photo.length <= 4 && photo !== "") {
-    avatarEl.innerHTML = `<span style="font-size: 1.35rem;">${photo}</span>`;
+  if (STATE.user && STATE.user.photo) {
+    avatarEl.innerHTML = `<img src="${STATE.user.photo}" alt="${STATE.user.name}">`;
   } else {
-    const initial = (STATE.user.avatar || STATE.user.name || "G").charAt(0).toUpperCase();
-    avatarEl.innerHTML = `<span>${initial}</span>`;
+    avatarEl.innerHTML = (STATE.user && STATE.user.avatar) ? STATE.user.avatar : "G";
   }
-
   document.getElementById("headerUserName").innerHTML = `${STATE.user.name} <span class="level-tag" id="headerLevelTag">NÍVEL ${STATE.currentLevel}</span>`;
   document.getElementById("headerStreakCount").innerText = STATE.streakDays || 1;
 }
@@ -1343,33 +1357,28 @@ function generateDailyShareCard() {
   ctx.fillText(new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }), 40, 92);
 
   // User Profile Row
-  const photo = STATE.user.photo;
-  if (photo && photo.startsWith("data:image")) {
-    const userImg = new Image();
-    userImg.src = photo;
+  if (cachedUserPhotoImg && cachedUserPhotoImg.complete && cachedUserPhotoImg.naturalWidth > 0) {
+    const avatarX = 40;
+    const avatarY = 114;
+    const avatarSize = 46;
+
     ctx.save();
     ctx.beginPath();
-    ctx.arc(66, 138, 26, 0, Math.PI * 2);
+    ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
     ctx.closePath();
     ctx.clip();
-    ctx.drawImage(userImg, 40, 112, 52, 52);
+    ctx.drawImage(cachedUserPhotoImg, avatarX, avatarY, avatarSize, avatarSize);
     ctx.restore();
 
-    ctx.strokeStyle = "#10b981";
+    ctx.strokeStyle = "rgba(16, 185, 129, 0.8)";
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(66, 138, 26, 0, Math.PI * 2);
+    ctx.arc(avatarX + avatarSize / 2, avatarY + avatarSize / 2, avatarSize / 2, 0, Math.PI * 2);
     ctx.stroke();
 
     ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 32px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto";
-    ctx.fillText(STATE.user.name.toUpperCase(), 106, 148);
-  } else if (photo && photo.length <= 4 && photo !== "") {
-    ctx.font = "38px system-ui";
-    ctx.fillText(photo, 40, 148);
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "bold 32px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto";
-    ctx.fillText(STATE.user.name.toUpperCase(), 92, 148);
+    ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto";
+    ctx.fillText(STATE.user.name.toUpperCase(), 100, 150);
   } else {
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto";
@@ -1550,6 +1559,7 @@ function renderAll() {
 // --- INIT APP ---
 window.addEventListener("DOMContentLoaded", () => {
   loadState();
+  updateCachedUserPhoto();
   applyTheme(STATE.user.theme || 'green');
   checkDateTurnover();
   checkStandaloneMode();
