@@ -3,6 +3,17 @@
  * Rule: 2 hours of training = 1 point
  */
 
+// --- HAPTIC FEEDBACK (Vibration for Mobile Phones) ---
+function triggerHaptic(type = "light") {
+  if (!navigator.vibrate) return;
+  try {
+    if (type === "light") navigator.vibrate(30);
+    else if (type === "medium") navigator.vibrate(55);
+    else if (type === "success") navigator.vibrate([40, 30, 80]);
+    else if (type === "levelup") navigator.vibrate([100, 50, 100, 50, 200]);
+  } catch (e) {}
+}
+
 // --- AUDIO SYNTHESIZER (Web Audio API - Offline & Instant) ---
 class SoundEffects {
   constructor() {
@@ -18,6 +29,7 @@ class SoundEffects {
     }
   }
   playBeep(freq = 600, duration = 0.15) {
+    triggerHaptic("medium");
     this.init();
     if (!this.ctx) return;
     const osc = this.ctx.createOscillator();
@@ -32,6 +44,7 @@ class SoundEffects {
     osc.stop(this.ctx.currentTime + duration);
   }
   playCheck() {
+    triggerHaptic("success");
     this.init();
     if (!this.ctx) return;
     const now = this.ctx.currentTime;
@@ -48,6 +61,7 @@ class SoundEffects {
     osc.stop(now + 0.12);
   }
   playLevelUp() {
+    triggerHaptic("levelup");
     this.init();
     if (!this.ctx) return;
     const notes = [261.63, 329.63, 392.00, 523.25, 659.25, 783.99]; // C E G C E G
@@ -423,6 +437,21 @@ function unlockBadge(id) {
 }
 
 // --- WORKOUT LIVE TIMER ---
+// --- SCREEN WAKE LOCK (Keep mobile screen ON during workouts) ---
+let screenWakeLock = null;
+async function requestScreenWakeLock() {
+  if ('wakeLock' in navigator) {
+    try {
+      screenWakeLock = await navigator.wakeLock.request('screen');
+    } catch (err) {}
+  }
+}
+function releaseScreenWakeLock() {
+  if (screenWakeLock !== null) {
+    screenWakeLock.release().then(() => { screenWakeLock = null; }).catch(() => {});
+  }
+}
+
 let timerInterval = null;
 let timerSeconds = 0;
 let timerRunning = false;
@@ -436,8 +465,10 @@ function formatSeconds(sec) {
 
 function toggleWorkoutTimer() {
   sfx.init();
+  triggerHaptic("medium");
   if (!timerRunning) {
     timerRunning = true;
+    requestScreenWakeLock();
     document.getElementById("btnTimerStart").style.display = "none";
     document.getElementById("btnTimerPause").style.display = "inline-flex";
     document.getElementById("btnTimerFinish").style.display = "inline-flex";
@@ -456,6 +487,7 @@ function pauseWorkoutTimer() {
   if (timerRunning) {
     clearInterval(timerInterval);
     timerRunning = false;
+    releaseScreenWakeLock();
     document.getElementById("btnTimerStart").style.display = "inline-flex";
     document.getElementById("btnTimerStart").innerText = "▶ Continuar";
     document.getElementById("btnTimerPause").style.display = "none";
@@ -464,6 +496,7 @@ function pauseWorkoutTimer() {
 
 function finishWorkoutTimer() {
   pauseWorkoutTimer();
+  releaseScreenWakeLock();
   const minutes = Math.max(1, Math.round(timerSeconds / 60));
   const dayRoutine = STATE.routines[STATE.activeDayIndex];
   const typeName = dayRoutine ? dayRoutine.title : "Musculação";
@@ -478,6 +511,7 @@ function finishWorkoutTimer() {
 
 function resetWorkoutTimer() {
   clearInterval(timerInterval);
+  releaseScreenWakeLock();
   timerRunning = false;
   timerSeconds = 0;
   document.getElementById("liveTimerDisplay").innerText = "00:00:00";
@@ -738,6 +772,65 @@ function handleSaveQuickSession(e) {
   closeQuickSessionModal();
   sfx.playCheck();
   alert(`Treino de ${mins} min registrado! Pontos atualizados.`);
+}
+
+// --- PWA INSTALL ENGINE FOR MOBILE ---
+let deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+
+  const nativeBox = document.getElementById('nativeInstallBox');
+  if (nativeBox) nativeBox.style.display = 'block';
+
+  const banner = document.getElementById('installAppBanner');
+  if (banner) banner.style.display = 'flex';
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  const banner = document.getElementById('installAppBanner');
+  if (banner) banner.style.display = 'none';
+  const headerBtn = document.getElementById('headerInstallBtn');
+  if (headerBtn) headerBtn.style.display = 'none';
+  triggerHaptic('levelup');
+  sfx.playLevelUp();
+  alert('🎉 IronLevel instalado com sucesso no seu celular!');
+});
+
+function openInstallModal() {
+  triggerHaptic('light');
+  document.getElementById('installModal').classList.add('open');
+}
+
+function closeInstallModal() {
+  triggerHaptic('light');
+  document.getElementById('installModal').classList.remove('open');
+}
+
+async function triggerPwaInstall() {
+  triggerHaptic('medium');
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    const { outcome } = await deferredInstallPrompt.userChoice;
+    if (outcome === 'accepted') {
+      deferredInstallPrompt = null;
+      closeInstallModal();
+    }
+  } else {
+    openInstallModal();
+  }
+}
+
+function checkStandaloneMode() {
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  if (isStandalone) {
+    const banner = document.getElementById('installAppBanner');
+    if (banner) banner.style.display = 'none';
+    const headerBtn = document.getElementById('headerInstallBtn');
+    if (headerBtn) headerBtn.style.display = 'none';
+  }
 }
 
 // --- ABOUT MODAL ---
@@ -1296,6 +1389,7 @@ function renderAll() {
 window.addEventListener("DOMContentLoaded", () => {
   loadState();
   checkDateTurnover();
+  checkStandaloneMode();
   STATE.activeDayIndex = getCurrentDayOfWeekIndex();
   renderAll();
 });

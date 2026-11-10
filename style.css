@@ -25,6 +25,7 @@
   padding: 0;
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 body {
@@ -32,11 +33,20 @@ body {
   color: var(--text-main);
   font-family: var(--font-family);
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   justify-content: center;
   align-items: flex-start;
   padding: 0;
   overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+input, select, textarea {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 /* App Wrapper for Mobile/Desktop Responsiveness */
@@ -44,17 +54,19 @@ body {
   width: 100%;
   max-width: 480px;
   min-height: 100vh;
+  min-height: 100dvh;
   background-color: var(--bg-secondary);
   box-shadow: 0 0 50px rgba(0, 0, 0, 0.7);
   display: flex;
   flex-direction: column;
   position: relative;
-  padding-bottom: 84px; /* Space for bottom navigation */
+  padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px));
 }
 
 /* Header */
 .app-header {
   padding: 16px 20px;
+  padding-top: max(16px, env(safe-area-inset-top, 0px));
   background: rgba(18, 24, 36, 0.95);
   backdrop-filter: blur(12px);
   position: sticky;
@@ -652,13 +664,65 @@ body {
   transform: translateX(-50%);
   width: 100%;
   max-width: 480px;
-  background: rgba(18, 24, 36, 0.95);
-  backdrop-filter: blur(12px);
+  background: rgba(18, 24, 36, 0.96);
+  backdrop-filter: blur(16px);
   border-top: 1px solid var(--border-color);
   display: flex;
   justify-content: space-around;
-  padding: 10px 4px;
+  padding: 8px 4px;
+  padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
   z-index: 50;
+}
+
+/* Install App Banner & Steps for Mobile */
+.install-banner {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(59, 130, 246, 0.18));
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.install-banner-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.install-step-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.install-step-num {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--accent-green);
+  color: #000;
+  font-weight: 800;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Mobile Touch Feedback on Buttons */
+.btn:active, .exercise-checkbox:active, .btn-icon:active, .day-btn:active {
+  transform: scale(0.95);
+  transition: transform 0.08s ease;
 }
 
 .nav-btn {

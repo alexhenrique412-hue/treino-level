@@ -2,10 +2,11 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>IronLevel - Treino, Níveis & Corrida</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#121824">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="IronLevel">
@@ -29,6 +30,9 @@
         </div>
       </div>
       <div style="display: flex; align-items: center; gap: 8px;">
+        <button class="btn btn-outline" id="headerInstallBtn" style="padding: 4px 10px; font-size: 0.72rem; border-color: var(--accent-green); color: var(--accent-green); display: flex; align-items: center; gap: 4px;" onclick="openInstallModal()">
+          <span>📲</span> Instalar
+        </button>
         <button class="btn-icon" style="border-radius: 50%; width: 34px; height: 34px; font-size: 0.9rem;" title="Sobre o aplicativo" onclick="openAboutModal()">
           ℹ️
         </button>
@@ -41,6 +45,20 @@
 
     <!-- TAB 1: INÍCIO (DASHBOARD & NÍVEL) -->
     <main id="tab-home" class="tab-content active">
+
+      <!-- Mobile Install Banner -->
+      <div id="installAppBanner" class="install-banner">
+        <div class="install-banner-left">
+          <span style="font-size: 1.6rem;">📲</span>
+          <div>
+            <strong style="color: #fff; font-size: 0.88rem;">Instalar App no Celular</strong>
+            <div style="font-size: 0.72rem; color: var(--text-muted);">Abra em tela cheia direto da tela inicial!</div>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="padding: 6px 12px; font-size: 0.78rem;" onclick="openInstallModal()">
+          Instalar
+        </button>
+      </div>
       
       <!-- Level Hero Box -->
       <section class="card level-hero">
@@ -508,6 +526,64 @@
         </div>
       </div>
       <button class="btn btn-primary btn-full" style="margin-top: 16px;" onclick="closeAboutModal()">Entendi, bora treinar!</button>
+    </div>
+  </div>
+
+  <!-- MODAL: INSTALAR NO CELULAR -->
+  <div class="modal-backdrop" id="installModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 style="display: flex; align-items: center; gap: 8px;">
+          <span>📲</span> Instalar no Celular
+        </h3>
+        <button class="btn-icon" onclick="closeInstallModal()">✕</button>
+      </div>
+
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">
+        Instale o <strong style="color: #fff;">IronLevel</strong> para abrir direto da tela inicial, em tela cheia e sem barras do navegador!
+      </p>
+
+      <!-- 1-Click Install Button (When browser supports native prompt) -->
+      <div id="nativeInstallBox" style="display: none; margin-bottom: 16px;">
+        <button class="btn btn-primary btn-full" style="padding: 12px; font-size: 0.95rem;" onclick="triggerPwaInstall()">
+          ⚡ Instalar Agora no Celular (1 Clique)
+        </button>
+        <div style="font-size: 0.7rem; color: var(--accent-green); text-align: center; margin-top: 6px;">
+          ✓ Compatível com seu navegador
+        </div>
+      </div>
+
+      <!-- Android Step-by-Step -->
+      <div class="card" style="margin-bottom: 12px; padding: 12px;">
+        <div style="font-weight: 800; font-size: 0.85rem; color: #34d399; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+          <span>🤖</span> No Android (Google Chrome / Edge):
+        </div>
+        <div class="install-step-card">
+          <div class="install-step-num">1</div>
+          <div style="font-size: 0.8rem;">Toque nos <strong>3 pontinhos (⋮)</strong> no canto superior direito do navegador.</div>
+        </div>
+        <div class="install-step-card">
+          <div class="install-step-num">2</div>
+          <div style="font-size: 0.8rem;">Selecione <strong>"Instalar aplicativo"</strong> ou <strong>"Adicionar à tela inicial"</strong>.</div>
+        </div>
+      </div>
+
+      <!-- iPhone Step-by-Step -->
+      <div class="card" style="margin-bottom: 14px; padding: 12px;">
+        <div style="font-weight: 800; font-size: 0.85rem; color: #60a5fa; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+          <span>🍎</span> No iPhone (Safari):
+        </div>
+        <div class="install-step-card">
+          <div class="install-step-num">1</div>
+          <div style="font-size: 0.8rem;">Toque no botão de <strong>Compartilhar (quadrado com seta ⎋)</strong> na barra inferior.</div>
+        </div>
+        <div class="install-step-card">
+          <div class="install-step-num">2</div>
+          <div style="font-size: 0.8rem;">Role para baixo e selecione <strong>"Adicionar à Tela de Início" (+)</strong>.</div>
+        </div>
+      </div>
+
+      <button class="btn btn-outline btn-full" onclick="closeInstallModal()">Fechar</button>
     </div>
   </div>
 
