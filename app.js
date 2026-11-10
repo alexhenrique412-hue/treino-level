@@ -1318,8 +1318,269 @@ function renderRunningTab() {
   }
 }
 
-function renderLevelsTab() {
+// --- GLOBAL LEADERBOARD & RANKING ENGINE ---
+let currentLevelsSubtab = 'ranking';
+let currentRankingFilter = 'points';
+
+const GLOBAL_ATHLETES_SEED = [
+  { id: "g1", name: "Titan Victor", country: "🇧🇷", level: 7, rank: "Lenda Suprema", badge: "👑", points: 54.0, km: 78.5, streak: 35, avatarBg: "#f59e0b" },
+  { id: "g2", name: "Marcus Stone", country: "🇺🇸", level: 6, rank: "Titã dos Pesos", badge: "⚡", points: 38.5, km: 52.0, streak: 22, avatarBg: "#ef4444" },
+  { id: "g3", name: "Lucas Viking", country: "🇧🇷", level: 5, rank: "Monstro da Maromba", badge: "🦁", points: 24.0, km: 64.2, streak: 19, avatarBg: "#8b5cf6" },
+  { id: "g4", name: "Alexandre Kuro", country: "🇯🇵", level: 5, rank: "Monstro da Maromba", badge: "🦁", points: 18.5, km: 34.0, streak: 14, avatarBg: "#10b981" },
+  { id: "g5", name: "Diego Alencar", country: "🇧🇷", level: 4, rank: "Atleta Dedicado", badge: "💎", points: 13.0, km: 28.5, streak: 10, avatarBg: "#3b82f6" },
+  { id: "g6", name: "Sarah Iron", country: "🇨🇦", level: 4, rank: "Atleta Dedicado", badge: "💎", points: 10.5, km: 42.0, streak: 12, avatarBg: "#ec4899" },
+  { id: "g7", name: "Rodrigo B.", country: "🇧🇷", level: 3, rank: "Rato de Academia", badge: "🥇", points: 7.0, km: 16.5, streak: 7, avatarBg: "#f97316" },
+  { id: "g8", name: "Enzo Fitt", country: "🇵🇹", level: 3, rank: "Rato de Academia", badge: "🥇", points: 5.5, km: 14.0, streak: 6, avatarBg: "#06b6d4" },
+  { id: "g9", name: "Matheus Silva", country: "🇧🇷", level: 2, rank: "Iniciado Focado", badge: "🥈", points: 3.5, km: 9.0, streak: 4, avatarBg: "#10b981" },
+  { id: "g10", name: "Carlos Treino", country: "🇧🇷", level: 2, rank: "Iniciado Focado", badge: "🥈", points: 1.5, km: 4.5, streak: 2, avatarBg: "#64748b" }
+];
+
+function switchLevelsSubtab(subtab) {
+  triggerHaptic('light');
+  currentLevelsSubtab = subtab;
+  
+  const rankBtn = document.getElementById("subtab-ranking-btn");
+  const tiersBtn = document.getElementById("subtab-tiers-btn");
+  const rankView = document.getElementById("subtab-ranking-view");
+  const tiersView = document.getElementById("subtab-tiers-view");
+
+  if (subtab === 'ranking') {
+    if (rankBtn) rankBtn.classList.add("active");
+    if (tiersBtn) tiersBtn.classList.remove("active");
+    if (rankView) rankView.style.display = "block";
+    if (tiersView) tiersView.style.display = "none";
+    renderRankingView();
+  } else {
+    if (rankBtn) rankBtn.classList.remove("active");
+    if (tiersBtn) tiersBtn.classList.add("active");
+    if (rankView) rankView.style.display = "none";
+    if (tiersView) tiersView.style.display = "block";
+    renderLevelsTiersView();
+  }
+}
+
+function setRankingFilter(filter) {
+  triggerHaptic('light');
+  currentRankingFilter = filter;
+  const btnPts = document.getElementById("rankFilterPoints");
+  const btnRuns = document.getElementById("rankFilterRuns");
+  if (filter === 'points') {
+    if (btnPts) {
+      btnPts.style.borderColor = "var(--accent-green)";
+      btnPts.style.color = "var(--accent-green)";
+    }
+    if (btnRuns) {
+      btnRuns.style.borderColor = "var(--border-color)";
+      btnRuns.style.color = "var(--text-muted)";
+    }
+  } else {
+    if (btnRuns) {
+      btnRuns.style.borderColor = "var(--accent-green)";
+      btnRuns.style.color = "var(--accent-green)";
+    }
+    if (btnPts) {
+      btnPts.style.borderColor = "var(--border-color)";
+      btnPts.style.color = "var(--text-muted)";
+    }
+  }
+  renderRankingView();
+}
+
+function getGlobalLeaderboardList() {
+  const totalKm = (STATE.runningHistory || []).reduce((acc, r) => acc + (r.km || 0), 0);
+  const currentLevelObj = getLevelForPoints(STATE.totalPoints);
+
+  const userItem = {
+    id: "user_me",
+    isUser: true,
+    name: STATE.user.name || "Guerreiro",
+    country: "🇧🇷",
+    level: STATE.currentLevel,
+    rank: currentLevelObj.rank,
+    badge: currentLevelObj.badge,
+    points: STATE.totalPoints,
+    km: parseFloat(totalKm.toFixed(1)),
+    streak: STATE.streakDays || 1,
+    photo: STATE.user.photo || null,
+    avatarBg: "var(--accent-green)"
+  };
+
+  const list = [...GLOBAL_ATHLETES_SEED, userItem];
+
+  if (currentRankingFilter === 'points') {
+    list.sort((a, b) => b.points - a.points);
+  } else {
+    list.sort((a, b) => b.km - a.km);
+  }
+
+  return list;
+}
+
+function renderRankingView(animated = false) {
+  if (animated) {
+    triggerHaptic('success');
+    sfx.playCheck();
+  }
+
+  const list = getGlobalLeaderboardList();
+  document.getElementById("leaderboardCountLabel").innerText = `${list.length} Atletas Conectados`;
+
+  // Render Top 3 Podium
+  const top1 = list[0];
+  const top2 = list[1];
+  const top3 = list[2];
+
+  const renderPodiumAvatar = (item) => {
+    if (item.photo) {
+      return `<img src="${item.photo}" alt="${item.name}">`;
+    }
+    const initial = item.name.charAt(0).toUpperCase();
+    return `<span style="color: #fff;">${initial}</span>`;
+  };
+
+  const podiumEl = document.getElementById("podiumContainer");
+  if (podiumEl && top1 && top2 && top3) {
+    podiumEl.innerHTML = `
+      <!-- 2º LUGAR -->
+      <div class="podium-step rank-2">
+        <div class="podium-avatar-box">
+          <div class="podium-avatar" style="background: ${top2.avatarBg};">
+            ${renderPodiumAvatar(top2)}
+          </div>
+          <div class="podium-badge">🥈</div>
+        </div>
+        <div class="podium-name">${top2.name} ${top2.isUser ? '(Você)' : ''}</div>
+        <div class="podium-pts">${currentRankingFilter === 'points' ? `${top2.points.toFixed(1)} pts` : `${top2.km} km`}</div>
+        <div class="podium-block">2</div>
+      </div>
+
+      <!-- 1º LUGAR -->
+      <div class="podium-step rank-1">
+        <div class="podium-avatar-box">
+          <div class="podium-crown">👑</div>
+          <div class="podium-avatar" style="background: ${top1.avatarBg};">
+            ${renderPodiumAvatar(top1)}
+          </div>
+          <div class="podium-badge">🥇</div>
+        </div>
+        <div class="podium-name" style="color: #f59e0b; font-size: 0.9rem;">${top1.name} ${top1.isUser ? '(Você)' : ''}</div>
+        <div class="podium-pts" style="font-size: 0.8rem; color: #f59e0b;">${currentRankingFilter === 'points' ? `${top1.points.toFixed(1)} pts` : `${top1.km} km`}</div>
+        <div class="podium-block">1</div>
+      </div>
+
+      <!-- 3º LUGAR -->
+      <div class="podium-step rank-3">
+        <div class="podium-avatar-box">
+          <div class="podium-avatar" style="background: ${top3.avatarBg};">
+            ${renderPodiumAvatar(top3)}
+          </div>
+          <div class="podium-badge">🥉</div>
+        </div>
+        <div class="podium-name">${top3.name} ${top3.isUser ? '(Você)' : ''}</div>
+        <div class="podium-pts">${currentRankingFilter === 'points' ? `${top3.points.toFixed(1)} pts` : `${top3.km} km`}</div>
+        <div class="podium-block">3</div>
+      </div>
+    `;
+  }
+
+  // User Sticky Rank
+  const userRank = list.findIndex(c => c.isUser) + 1;
+  const userItem = list.find(c => c.isUser);
+  const userStickyEl = document.getElementById("userStickyRankBox");
+
+  let overtakeInfo = "";
+  if (userRank === 1) {
+    overtakeInfo = `<span style="color: #f59e0b; font-weight: 800;">👑 VOCÊ É O TOP 1 MUNDIAL!</span>`;
+  } else if (userRank > 1) {
+    const ahead = list[userRank - 2];
+    if (currentRankingFilter === 'points') {
+      const diff = (ahead.points - userItem.points) + 0.1;
+      const hoursDiff = (diff * 2).toFixed(1);
+      overtakeInfo = `Faltam <strong>${diff.toFixed(1)} pts</strong> (~${hoursDiff}h de treino) para ultrapassar <strong>${ahead.name}</strong> (#${userRank - 1})!`;
+    } else {
+      const diffKm = (ahead.km - userItem.km).toFixed(1);
+      overtakeInfo = `Faltam <strong>${diffKm} km</strong> para ultrapassar <strong>${ahead.name}</strong> (#${userRank - 1})!`;
+    }
+  }
+
+  if (userStickyEl) {
+    userStickyEl.innerHTML = `
+      <div class="user-rank-card">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="font-size: 1.4rem; font-weight: 900; color: var(--accent-green); min-width: 32px;">
+            #${userRank}
+          </div>
+          <div class="leader-avatar" style="width: 44px; height: 44px; border-color: var(--accent-green);">
+            ${renderPodiumAvatar(userItem)}
+          </div>
+          <div>
+            <div style="font-weight: 800; font-size: 0.95rem; color: #fff;">
+              ${userItem.name} <span style="font-size: 0.7rem; color: var(--accent-green); font-weight: 700;">(VOCÊ)</span>
+            </div>
+            <div style="font-size: 0.72rem; color: var(--text-muted);">
+              ${userItem.badge} Nível ${userItem.level} • ${overtakeInfo}
+            </div>
+          </div>
+        </div>
+        <div style="text-align: right;">
+          <div style="font-size: 1.15rem; font-weight: 900; color: var(--accent-orange);">
+            ${currentRankingFilter === 'points' ? `${userItem.points.toFixed(1)} pts` : `${userItem.km} km`}
+          </div>
+          <div style="font-size: 0.65rem; color: var(--text-muted);">Sua pontuação</div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Leaderboard Full Table
+  const listEl = document.getElementById("leaderboardList");
+  if (listEl) {
+    listEl.innerHTML = list.map((item, idx) => {
+      const rankNum = idx + 1;
+      let rankDisplay = `#${rankNum}`;
+      let rankClass = "";
+      if (rankNum === 1) { rankDisplay = "🥇"; rankClass = "top-1"; }
+      else if (rankNum === 2) { rankDisplay = "🥈"; rankClass = "top-2"; }
+      else if (rankNum === 3) { rankDisplay = "🥉"; rankClass = "top-3"; }
+
+      const isMe = item.isUser;
+      const avatarHtml = item.photo 
+        ? `<img src="${item.photo}" alt="${item.name}">` 
+        : `<span style="color: #fff;">${item.name.charAt(0).toUpperCase()}</span>`;
+
+      return `
+        <div class="leader-item ${isMe ? 'is-user' : ''}">
+          <div class="leader-rank-col ${rankClass}">${rankDisplay}</div>
+          <div class="leader-user-info">
+            <div class="leader-avatar" style="background: ${item.avatarBg || 'var(--bg-card)'};">
+              ${avatarHtml}
+            </div>
+            <div>
+              <div style="font-weight: 800; font-size: 0.88rem; color: ${isMe ? 'var(--accent-green)' : '#fff'};">
+                <span>${item.country}</span> ${item.name} ${isMe ? '<span style="font-size:0.68rem; color: var(--accent-green); font-weight:800;">(VOCÊ)</span>' : ''}
+              </div>
+              <div style="font-size: 0.7rem; color: var(--text-muted);">
+                ${item.badge} Nível ${item.level} • ${item.rank}
+              </div>
+            </div>
+          </div>
+          <div class="leader-stats-col">
+            <div style="font-weight: 800; font-size: 0.95rem; color: var(--accent-orange);">
+              ${currentRankingFilter === 'points' ? `${item.points.toFixed(1)} pts` : `${item.km} km`}
+            </div>
+            <div style="font-size: 0.65rem; color: var(--text-muted);">
+              ${currentRankingFilter === 'points' ? `${Math.floor(item.points * 2)}h treino` : `🔥 ${item.streak} dias`}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+}
+
+function renderLevelsTiersView() {
   const listEl = document.getElementById("levelsHierarchyList");
+  if (!listEl) return;
   listEl.innerHTML = LEVELS.map(l => {
     const isCurrent = l.level === STATE.currentLevel;
     const isUnlocked = STATE.totalPoints >= l.minPoints;
@@ -1348,6 +1609,7 @@ function renderLevelsTab() {
 
   // Badges Grid
   const badgesGrid = document.getElementById("badgesGrid");
+  if (!badgesGrid) return;
   badgesGrid.innerHTML = STATE.badges.map(b => `
     <div style="background: rgba(255,255,255,0.03); border: 1px solid ${b.unlocked ? 'var(--accent-green)' : 'var(--border-color)'}; border-radius: var(--radius-sm); padding: 10px; text-align: center; opacity: ${b.unlocked ? '1' : '0.45'};">
       <div style="font-size: 1.8rem; margin-bottom: 4px;">${b.icon}</div>
@@ -1358,6 +1620,14 @@ function renderLevelsTab() {
       </span>
     </div>
   `).join('');
+}
+
+function renderLevelsTab() {
+  if (currentLevelsSubtab === 'ranking') {
+    renderRankingView();
+  } else {
+    renderLevelsTiersView();
+  }
 }
 
 // --- SHARE CARD GENERATOR (CANVAS) ---

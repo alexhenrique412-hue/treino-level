@@ -296,24 +296,71 @@
 
     </section>
 
-    <!-- TAB 4: DESAFIOS & NÍVEIS -->
+    <!-- TAB 4: RANKING MUNDIAL & NÍVEIS -->
     <section id="tab-levels" class="tab-content">
       
-      <div class="card-title">
-        <span>🏆 Tabela de Níveis & Patentes</span>
+      <!-- Segmented Switcher: Ranking vs Níveis -->
+      <div class="segmented-control">
+        <button class="segmented-btn active" id="subtab-ranking-btn" onclick="switchLevelsSubtab('ranking')">
+          🌍 Ranking Mundial (Top)
+        </button>
+        <button class="segmented-btn" id="subtab-tiers-btn" onclick="switchLevelsSubtab('tiers')">
+          🏆 Patentes & Conquistas
+        </button>
       </div>
 
-      <!-- All Levels Hierarchy -->
-      <div id="levelsHierarchyList">
-        <!-- Rendered by JS -->
+      <!-- VIEW A: RANKING MUNDIAL -->
+      <div id="subtab-ranking-view">
+        <!-- Filter Bar -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <div style="display: flex; gap: 6px;">
+            <button class="btn btn-outline" id="rankFilterPoints" style="padding: 4px 10px; font-size: 0.72rem; border-color: var(--accent-green); color: var(--accent-green);" onclick="setRankingFilter('points')">
+              ⭐ Pontos & Nível
+            </button>
+            <button class="btn btn-outline" id="rankFilterRuns" style="padding: 4px 10px; font-size: 0.72rem;" onclick="setRankingFilter('runs')">
+              🏃‍♂️ Km Corrida
+            </button>
+          </div>
+          <button class="btn-icon" style="width: 32px; height: 32px;" title="Atualizar Ranking" onclick="renderRankingView(true)">
+            🔄
+          </button>
+        </div>
+
+        <!-- Podium Top 3 -->
+        <div class="podium-container" id="podiumContainer">
+          <!-- Rendered by JS -->
+        </div>
+
+        <!-- Sticky User Position Card -->
+        <div id="userStickyRankBox">
+          <!-- Rendered by JS -->
+        </div>
+
+        <!-- Leaderboard Full List -->
+        <div class="card-title">
+          <span>Classificação Global</span>
+          <span style="font-size: 0.72rem; color: var(--text-muted);" id="leaderboardCountLabel">12 Conectados</span>
+        </div>
+        <div id="leaderboardList">
+          <!-- Rendered by JS -->
+        </div>
       </div>
 
-      <!-- Badges / Conquistas -->
-      <div class="card-title" style="margin-top: 20px;">
-        <span>🎖️ Conquistas Desbloqueáveis</span>
-      </div>
-      <div id="badgesGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        <!-- Rendered by JS -->
+      <!-- VIEW B: PATENTES & CONQUISTAS -->
+      <div id="subtab-tiers-view" style="display: none;">
+        <div class="card-title">
+          <span>🏆 Tabela de Níveis & Patentes</span>
+        </div>
+        <div id="levelsHierarchyList">
+          <!-- Rendered by JS -->
+        </div>
+
+        <div class="card-title" style="margin-top: 20px;">
+          <span>🎖️ Conquistas Desbloqueáveis</span>
+        </div>
+        <div id="badgesGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <!-- Rendered by JS -->
+        </div>
       </div>
 
     </section>
@@ -365,7 +412,7 @@
       </button>
       <button class="nav-btn" onclick="switchTab('levels')" id="nav-levels">
         <svg viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>
-        <span>Níveis</span>
+        <span>Ranking</span>
       </button>
       <button class="nav-btn" onclick="switchTab('share')" id="nav-share">
         <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
