@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ironlevel-v2';
+const CACHE_NAME = 'ironlevel-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -27,6 +27,12 @@ self.addEventListener('activate', (e) => {
     })
   );
   self.clients.claim();
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.action === 'skipWaiting') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('fetch', (e) => {

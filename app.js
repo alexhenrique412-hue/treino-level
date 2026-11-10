@@ -835,6 +835,40 @@ function checkStandaloneMode() {
   }
 }
 
+// --- FORCE UPDATE & CLEAR CACHE ---
+async function forceUpdateAndClearCache() {
+  triggerHaptic('medium');
+  const confirmMsg = "Deseja buscar a versão mais recente do app e limpar o cache?\n\n✓ Seus treinos, pontos e foto NÃO serão apagados!";
+  if (!confirm(confirmMsg)) return;
+
+  try {
+    // 1. Desregistra service workers antigos
+    if ('serviceWorker' in navigator) {
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const reg of registrations) {
+        if (reg.active) {
+          reg.active.postMessage({ action: 'skipWaiting' });
+        }
+        await reg.unregister();
+      }
+    }
+
+    // 2. Apaga todos os caches armazenados no navegador
+    if ('caches' in window) {
+      const cacheNames = await caches.keys();
+      await Promise.all(cacheNames.map(name => caches.delete(name)));
+    }
+
+    // 3. Recarrega a página forçando a busca dos arquivos mais novos do GitHub
+    alert("Cache limpo com sucesso! O app será recarregado agora com a versão mais recente.");
+    const baseUrl = window.location.href.split('#')[0].split('?')[0];
+    window.location.replace(baseUrl + '?t=' + Date.now());
+  } catch (err) {
+    console.error("Erro ao limpar cache:", err);
+    window.location.reload(true);
+  }
+}
+
 // --- THEME PICKER & LIVE PREVIEW ---
 function applyTheme(themeName) {
   STATE.user.theme = themeName || 'green';
