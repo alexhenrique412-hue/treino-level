@@ -559,7 +559,494 @@ function cancelRestTimer() {
   document.getElementById("restTimerPill").classList.remove("active");
 }
 
-// --- RUNNING TRACKER ---
+// --- RUNNING TRACKER & STRAVA-STYLE GPS ENGINE ---
+let currentRunSubtab = 'gps';
+let leafletMap = null;
+let mapStreetLayer = null;
+let mapSatLayer = null;
+let isSatellite = true;
+let routePolyline = null;
+let currentPosMarker = null;
+let startPosMarker = null;
+
+// GPS Tracking State
+let gpsTracking = false;
+let gpsPaused = false;
+let gpsWatchId = null;
+let gpsTimerInterval = null;
+let gpsElapsedSeconds = 0;
+let gpsTotalKm = 0;
+let gpsRoutePoints = [];
+let lastGpsPoint = null;
+
+// Route Viewer Modal State
+let routeModalMap = null;
+let routeModalPolyline = null;
+
+function switchRunSubtab(subtab) {
+  triggerHaptic('light');
+  currentRunSubtab = subtab;
+
+  const gpsBtn = document.getElementById("subtab-gps-btn");
+  const manualBtn = document.getElementById("subtab-manual-btn");
+  const gpsView = document.getElementById("runGpsView");
+  const manualView = document.getElementById("runManualView");
+
+  if (subtab === 'gps') {
+    if (gpsBtn) gpsBtn.classList.add("active");
+    if (manualBtn) manualBtn.classList.remove("active");
+    if (gpsView) gpsView.style.display = "block";
+    if (manualView) manualView.style.display = "none";
+    initRunMapIfNeeded();
+  } else {
+    if (gpsBtn) gpsBtn.classList.remove("active");
+    if (manualBtn) manualBtn.classList.add("active");
+    if (gpsView) gpsView.style.display = "none";
+    if (manualView) manualView.style.display = "block";
+  }
+}
+
+function initRunMapIfNeeded() {
+  if (typeof L === 'undefined') return;
+
+  const mapContainer = document.getElementById("runMap");
+  if (!mapContainer) return;
+
+  if (!leafletMap) {
+    // Default center (ex: Brasil central or fallback)
+    leafletMap = L.map('runMap', { zoomControl: false }).setView([-23.5505, -46.6333], 15);
+    L.control.zoom({ position: 'bottomright' }).addTo(leafletMap);
+
+    // Street layer (OpenStreetMap)
+    mapStreetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    });
+
+    // Satellite layer (Esri World Imagery - identical to Strava)
+    mapSatLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 19,
+      attribution: '© Esri Satellite'
+    });
+
+    // Default to Satellite view!
+    mapSatLayer.addTo(leafletMap);
+    isSatellite = true;
+
+    // Orange Route Polyline (Strava orange #ff5722)
+    routePolyline = L.polyline([], {
+      color: '#ff5722',
+      weight: 6,
+      opacity: 0.95,
+      lineCap: 'round',
+      lineJoin: 'round'
+    }).addTo(leafletMap);
+
+    // Initial position fetch
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          if (leafletMap) {
+            leafletMap.setView([lat, lng], 16);
+            updateCurrentPosMarker(lat, lng);
+          }
+        },
+        (err) => {
+          console.log("GPS inicial:", err.message);
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    }
+  }
+
+  setTimeout(() => {
+    if (leafletMap) leafletMap.invalidateSize();
+  }, 200);
+}
+
+function toggleMapTiles() {
+  triggerHaptic('light');
+  if (!leafletMap) return;
+  const btn = document.getElementById("btnToggleMapLayer");
+  if (isSatellite) {
+    leafletMap.removeLayer(mapSatLayer);
+    mapStreetLayer.addTo(leafletMap);
+    isSatellite = false;
+    if (btn) btn.innerText = "🗺️ Ruas";
+  } else {
+    leafletMap.removeLayer(mapStreetLayer);
+    mapSatLayer.addTo(leafletMap);
+    isSatellite = true;
+    if (btn) btn.innerText = "🛰️ Satélite";
+  }
+}
+
+function centerMapOnCurrentPos() {
+  triggerHaptic('light');
+  if (lastGpsPoint && leafletMap) {
+    leafletMap.setView([lastGpsPoint.lat, lastGpsPoint.lng], 17);
+  } else if (navigator.geolocation && leafletMap) {
+    navigator.geolocation.getCurrentPosition((pos) => {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      leafletMap.setView([lat, lng], 17);
+      updateCurrentPosMarker(lat, lng);
+    });
+  }
+}
+
+function updateCurrentPosMarker(lat, lng) {
+  if (!leafletMap || typeof L === 'undefined') return;
+
+  const pulseIcon = L.divIcon({
+    className: 'gps-pulse-icon',
+    html: `<div style="width: 16px; height: 16px; border-radius: 50%; background: #3b82f6; border: 3px solid #fff; box-shadow: 0 0 12px #3b82f6;"></div>`,
+    iconSize: [16, 16],
+    iconAnchor: [8, 8]
+  });
+
+  if (!currentPosMarker) {
+    currentPosMarker = L.marker([lat, lng], { icon: pulseIcon }).addTo(leafletMap);
+  } else {
+    currentPosMarker.setLatLng([lat, lng]);
+  }
+}
+
+// Haversine Distance Formula (km)
+function calculateDistanceKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
+function startGpsRun() {
+  if (!navigator.geolocation) {
+    alert("Geolocalização GPS não é suportada pelo seu navegador.");
+    return;
+  }
+
+  sfx.init();
+  triggerHaptic('success');
+  initRunMapIfNeeded();
+
+  gpsTracking = true;
+  gpsPaused = false;
+  gpsElapsedSeconds = 0;
+  gpsTotalKm = 0;
+  gpsRoutePoints = [];
+  lastGpsPoint = null;
+
+  if (routePolyline) routePolyline.setLatLngs([]);
+  if (startPosMarker && leafletMap) {
+    leafletMap.removeLayer(startPosMarker);
+    startPosMarker = null;
+  }
+
+  // Keep mobile screen on
+  requestScreenWakeLock();
+
+  // Update UI buttons
+  document.getElementById("btnGpsStart").style.display = "none";
+  document.getElementById("btnGpsPause").style.display = "inline-flex";
+  document.getElementById("btnGpsFinish").style.display = "inline-flex";
+  document.getElementById("btnGpsCancel").style.display = "inline-flex";
+  document.getElementById("btnGpsResume").style.display = "none";
+
+  const statusText = document.getElementById("gpsStatusText");
+  if (statusText) statusText.innerText = "🔴 Gravando rota GPS ao vivo... Bora correr!";
+
+  // Start Live Timer
+  gpsTimerInterval = setInterval(() => {
+    if (!gpsPaused) {
+      gpsElapsedSeconds++;
+      updateGpsHud();
+    }
+  }, 1000);
+
+  // Start GPS Watch Position
+  gpsWatchId = navigator.geolocation.watchPosition(
+    handleGpsPosition,
+    handleGpsError,
+    { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
+  );
+}
+
+function handleGpsPosition(position) {
+  if (!gpsTracking || gpsPaused) return;
+
+  const { latitude, longitude, accuracy } = position.coords;
+
+  // Filter out extreme GPS jitter
+  if (accuracy > 40) return;
+
+  const statusText = document.getElementById("gpsStatusText");
+  if (statusText) {
+    statusText.innerText = `🔴 Gravando • Precisão GPS: ±${Math.round(accuracy)}m`;
+  }
+
+  const currentLatLng = [latitude, longitude];
+
+  if (lastGpsPoint) {
+    const dKm = calculateDistanceKm(lastGpsPoint.lat, lastGpsPoint.lng, latitude, longitude);
+    // Only accumulate if moved at least 2.5 meters
+    if (dKm >= 0.0025) {
+      gpsTotalKm += dKm;
+      lastGpsPoint = { lat: latitude, lng: longitude };
+      gpsRoutePoints.push(currentLatLng);
+      if (routePolyline) routePolyline.addLatLng(currentLatLng);
+    }
+  } else {
+    // First GPS point (Start)
+    lastGpsPoint = { lat: latitude, lng: longitude };
+    gpsRoutePoints.push(currentLatLng);
+    if (routePolyline) routePolyline.addLatLng(currentLatLng);
+
+    // Add Green Start Flag/Circle
+    if (leafletMap && typeof L !== 'undefined') {
+      const startIcon = L.divIcon({
+        className: 'start-marker-icon',
+        html: `<div style="background: #10b981; color: #000; font-weight: 800; font-size: 11px; width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: 0 0 10px #10b981;">▶</div>`,
+        iconSize: [22, 22],
+        iconAnchor: [11, 11]
+      });
+      startPosMarker = L.marker(currentLatLng, { icon: startIcon }).addTo(leafletMap);
+    }
+  }
+
+  // Update current pos marker & pan map smoothly
+  updateCurrentPosMarker(latitude, longitude);
+  if (leafletMap) leafletMap.panTo(currentLatLng);
+
+  updateGpsHud();
+}
+
+function handleGpsError(err) {
+  console.warn("Erro GPS:", err.message);
+  const statusText = document.getElementById("gpsStatusText");
+  if (statusText) {
+    statusText.innerText = "Aguardando sinal de satélite GPS...";
+  }
+}
+
+function updateGpsHud() {
+  // Time format
+  const h = Math.floor(gpsElapsedSeconds / 3600);
+  const m = Math.floor((gpsElapsedSeconds % 3600) / 60);
+  const s = gpsElapsedSeconds % 60;
+  const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  document.getElementById("gpsLiveTimer").innerText = timeStr;
+
+  // Distance
+  document.getElementById("gpsLiveDistance").innerText = gpsTotalKm.toFixed(2);
+
+  // Pace (min/km)
+  if (gpsTotalKm > 0.05) {
+    const paceDecimal = (gpsElapsedSeconds / 60) / gpsTotalKm;
+    const paceMin = Math.floor(paceDecimal);
+    const paceSec = Math.round((paceDecimal - paceMin) * 60);
+    if (paceMin < 60) {
+      document.getElementById("gpsLivePace").innerText = `${paceMin}'${String(paceSec).padStart(2, '0')}"`;
+    } else {
+      document.getElementById("gpsLivePace").innerText = "-";
+    }
+
+    // Speed km/h
+    const speed = (gpsTotalKm / (gpsElapsedSeconds / 3600)).toFixed(1);
+    document.getElementById("gpsLiveSpeed").innerText = speed;
+  } else {
+    document.getElementById("gpsLivePace").innerText = "-";
+    document.getElementById("gpsLiveSpeed").innerText = "0.0";
+  }
+}
+
+function pauseGpsRun() {
+  triggerHaptic('medium');
+  gpsPaused = true;
+  document.getElementById("btnGpsPause").style.display = "none";
+  document.getElementById("btnGpsResume").style.display = "inline-flex";
+  const statusText = document.getElementById("gpsStatusText");
+  if (statusText) statusText.innerText = "⏸ Corrida pausada. Toque em Continuar para retomar.";
+}
+
+function resumeGpsRun() {
+  triggerHaptic('medium');
+  gpsPaused = false;
+  document.getElementById("btnGpsResume").style.display = "none";
+  document.getElementById("btnGpsPause").style.display = "inline-flex";
+  const statusText = document.getElementById("gpsStatusText");
+  if (statusText) statusText.innerText = "🔴 Gravando rota GPS ao vivo...";
+}
+
+function cancelGpsRun() {
+  if (confirm("Deseja realmente cancelar esta corrida? Os dados dela não serão salvos.")) {
+    stopGpsTracking();
+    resetGpsHud();
+  }
+}
+
+function stopGpsTracking() {
+  gpsTracking = false;
+  gpsPaused = false;
+  if (gpsWatchId) {
+    navigator.geolocation.clearWatch(gpsWatchId);
+    gpsWatchId = null;
+  }
+  if (gpsTimerInterval) {
+    clearInterval(gpsTimerInterval);
+    gpsTimerInterval = null;
+  }
+  releaseScreenWakeLock();
+
+  document.getElementById("btnGpsStart").style.display = "inline-flex";
+  document.getElementById("btnGpsPause").style.display = "none";
+  document.getElementById("btnGpsResume").style.display = "none";
+  document.getElementById("btnGpsFinish").style.display = "none";
+  document.getElementById("btnGpsCancel").style.display = "none";
+
+  const statusText = document.getElementById("gpsStatusText");
+  if (statusText) statusText.innerText = "GPS pronto. Toque em Iniciar e comece a correr!";
+}
+
+function resetGpsHud() {
+  gpsElapsedSeconds = 0;
+  gpsTotalKm = 0;
+  gpsRoutePoints = [];
+  lastGpsPoint = null;
+  document.getElementById("gpsLiveTimer").innerText = "00:00:00";
+  document.getElementById("gpsLiveDistance").innerText = "0.00";
+  document.getElementById("gpsLivePace").innerText = "0'00\"";
+  document.getElementById("gpsLiveSpeed").innerText = "0.0";
+  if (routePolyline) routePolyline.setLatLngs([]);
+}
+
+function finishGpsRun() {
+  triggerHaptic('success');
+  sfx.playLevelUp();
+
+  const minutes = Math.max(1, Math.round(gpsElapsedSeconds / 60));
+  const finalKm = parseFloat(gpsTotalKm.toFixed(2));
+
+  let paceStr = "-";
+  if (finalKm > 0) {
+    const paceDecimal = minutes / finalKm;
+    const paceMin = Math.floor(paceDecimal);
+    const paceSec = Math.round((paceDecimal - paceMin) * 60);
+    paceStr = `${paceMin}'${String(paceSec).padStart(2, '0')}"/km`;
+  }
+
+  const now = new Date();
+  const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+  const runItem = {
+    id: "run_" + Date.now(),
+    date: getTodayDateStr(),
+    timeStr: timeStr,
+    km: finalKm,
+    minutes: minutes,
+    pace: paceStr,
+    route: [...gpsRoutePoints] // Save the route for map viewing!
+  };
+
+  STATE.todayRuns.push(runItem);
+  STATE.runningHistory.unshift(runItem);
+
+  // Add the running minutes to training hours (2h = 1pt rule!)
+  addTrainingMinutes(minutes, `Corrida GPS (${finalKm} km)`);
+
+  stopGpsTracking();
+  resetGpsHud();
+  renderRunningTab();
+
+  alert(`🏁 Corrida finalizada com sucesso!\n\n📏 Distância: ${finalKm} km\n⏱️ Duração: ${minutes} min\n⚡ Ritmo: ${paceStr}\n\nSua rota foi salva no Histórico!`);
+}
+
+// --- ROUTE MODAL VIEWER (View saved GPS routes on satellite map) ---
+function openRouteModal(runId) {
+  triggerHaptic('light');
+  const run = STATE.runningHistory.find(r => r.id === runId);
+  if (!run || !run.route || run.route.length === 0) {
+    alert("Esta corrida foi registrada manualmente e não possui rota de mapa.");
+    return;
+  }
+
+  document.getElementById("routeModalTitle").innerText = `🗺️ Corrida de ${run.km} km`;
+  document.getElementById("routeModalDetails").innerHTML = `
+    <strong>Data:</strong> ${run.date} às ${run.timeStr} • <strong>Tempo:</strong> ${run.minutes} min • <strong>Ritmo:</strong> ${run.pace}
+  `;
+
+  document.getElementById("routeModal").classList.add("open");
+
+  setTimeout(() => {
+    initRouteModalMap(run.route);
+  }, 250);
+}
+
+function closeRouteModal() {
+  triggerHaptic('light');
+  document.getElementById("routeModal").classList.remove("open");
+}
+
+function initRouteModalMap(routePoints) {
+  if (typeof L === 'undefined') return;
+
+  const container = document.getElementById("routeModalMap");
+  if (!container) return;
+
+  if (routeModalMap) {
+    routeModalMap.remove();
+    routeModalMap = null;
+  }
+
+  routeModalMap = L.map('routeModalMap', { zoomControl: false });
+  L.control.zoom({ position: 'bottomright' }).addTo(routeModalMap);
+
+  // Satellite layer (Esri)
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 19,
+    attribution: '© Esri Satellite'
+  }).addTo(routeModalMap);
+
+  // Orange route line (Strava style)
+  routeModalPolyline = L.polyline(routePoints, {
+    color: '#ff5722',
+    weight: 6,
+    opacity: 0.95,
+    lineCap: 'round',
+    lineJoin: 'round'
+  }).addTo(routeModalMap);
+
+  // Fit bounds to route
+  if (routePoints.length > 0) {
+    routeModalMap.fitBounds(routeModalPolyline.getBounds(), { padding: [30, 30] });
+
+    // Start Pin (Green)
+    L.circleMarker(routePoints[0], {
+      radius: 7,
+      color: '#fff',
+      weight: 2,
+      fillColor: '#10b981',
+      fillOpacity: 1
+    }).addTo(routeModalMap).bindPopup("Início da Corrida");
+
+    // End Pin (Red)
+    L.circleMarker(routePoints[routePoints.length - 1], {
+      radius: 7,
+      color: '#fff',
+      weight: 2,
+      fillColor: '#ef4444',
+      fillOpacity: 1
+    }).addTo(routeModalMap).bindPopup("Fim da Corrida");
+  }
+}
+
+// --- MANUAL RUN FORM ---
 function calcRunPace() {
   const km = parseFloat(document.getElementById("runInputKm").value) || 0;
   const mins = parseFloat(document.getElementById("runInputMinutes").value) || 0;
@@ -577,7 +1064,6 @@ function calcRunPace() {
     const speed = (km / (mins / 60)).toFixed(1);
     speedEl.innerText = `${speed} km/h`;
     
-    // Approximate 60-70 kcal per km
     const cals = Math.round(km * 65);
     calEl.innerText = `~${cals} kcal`;
   } else {
@@ -609,7 +1095,8 @@ function handleSaveRun(e) {
     timeStr: timeStr,
     km: km,
     minutes: minutes,
-    pace: paceStr
+    pace: paceStr,
+    route: null
   };
 
   STATE.todayRuns.push(runItem);
@@ -1124,7 +1611,12 @@ function switchTab(tabId) {
 
   if (tabId === 'home') renderHomeTab();
   if (tabId === 'workout') renderWorkoutTab();
-  if (tabId === 'running') renderRunningTab();
+  if (tabId === 'running') {
+    renderRunningTab();
+    if (currentRunSubtab === 'gps') {
+      setTimeout(initRunMapIfNeeded, 150);
+    }
+  }
   if (tabId === 'levels') renderLevelsTab();
   if (tabId === 'share') renderShareTab();
 }
@@ -1305,12 +1797,17 @@ function renderRunningTab() {
     `;
   } else {
     historyEl.innerHTML = STATE.runningHistory.slice(0, 10).map(r => `
-      <div class="session-item">
-        <div>
+      <div class="session-item" style="align-items: center;">
+        <div style="flex: 1;">
           <strong style="color: #fff;">🏃‍♂️ ${r.km} km</strong> em <strong>${r.minutes} min</strong>
-          <div style="font-size: 0.72rem; color: var(--text-muted);">
+          <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 1px;">
             Data: ${r.date} às ${r.timeStr} • Ritmo: <span style="color: var(--accent-orange); font-weight:700;">${r.pace}</span>
           </div>
+          ${(r.route && r.route.length > 0) ? `
+            <button type="button" class="btn btn-outline" style="padding: 3px 8px; font-size: 0.68rem; margin-top: 6px; color: var(--accent-orange); border-color: rgba(245,158,11,0.4); display: inline-flex; align-items: center; gap: 4px;" onclick="openRouteModal('${r.id}')">
+              🗺️ Ver Rota no Mapa
+            </button>
+          ` : ''}
         </div>
         <span class="session-badge">+${(r.minutes/120).toFixed(2)} pt</span>
       </div>

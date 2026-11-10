@@ -12,6 +12,9 @@
   <meta name="apple-mobile-web-app-title" content="IronLevel">
   <link rel="apple-touch-icon" href="icon-192.png">
   <link rel="stylesheet" href="style.css">
+  <!-- Leaflet Map for GPS Route Tracking (Strava style) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
 
@@ -257,36 +260,112 @@
         </div>
       </div>
 
-      <!-- Register Run Form -->
-      <div class="card">
-        <div class="card-title">Registrar Corrida de Hoje</div>
-        <form id="runForm" onsubmit="handleSaveRun(event)">
-          <div class="form-row">
-            <div class="form-group">
-              <label>Distância (Km)</label>
-              <input type="number" id="runInputKm" step="0.01" min="0.1" placeholder="Ex: 5.2" required oninput="calcRunPace()">
+      <!-- Segmented Control: GPS ao Vivo vs Registro Manual -->
+      <div class="segmented-control" style="margin-top: 14px;">
+        <button class="segmented-btn active" id="subtab-gps-btn" onclick="switchRunSubtab('gps')">
+          🛰️ Rastrear GPS ao Vivo (Mapa)
+        </button>
+        <button class="segmented-btn" id="subtab-manual-btn" onclick="switchRunSubtab('manual')">
+          📝 Registro Manual (Esteira)
+        </button>
+      </div>
+
+      <!-- VIEW A: RASTREADOR GPS AO VIVO (ESTILO STRAVA) -->
+      <div id="runGpsView">
+        
+        <!-- Live HUD (Head-Up Display) -->
+        <div class="run-hud">
+          <div class="run-hud-main">
+            <span style="font-size: 0.68rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">⏱️ TEMPO DE CORRIDA</span>
+            <div class="run-hud-time" id="gpsLiveTimer">00:00:00</div>
+          </div>
+          <div class="run-hud-grid">
+            <div class="run-hud-item">
+              <div class="val" id="gpsLiveDistance">0.00</div>
+              <div class="label">Quilômetros</div>
             </div>
-            <div class="form-group">
-              <label>Tempo (Minutos)</label>
-              <input type="number" id="runInputMinutes" min="1" placeholder="Ex: 28" required oninput="calcRunPace()">
+            <div class="run-hud-item">
+              <div class="val" id="gpsLivePace" style="color: #60a5fa;">0'00"</div>
+              <div class="label">Ritmo (Pace /km)</div>
+            </div>
+            <div class="run-hud-item">
+              <div class="val" id="gpsLiveSpeed" style="color: var(--accent-green);">0.0</div>
+              <div class="label">Velocidade (km/h)</div>
             </div>
           </div>
+        </div>
 
-          <div style="background: rgba(255,255,255,0.03); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 14px; display: flex; justify-content: space-around; font-size: 0.75rem;">
-            <div>Ritmo (Pace): <strong id="runCalcPace" style="color: var(--accent-orange); font-size: 0.85rem;">-</strong></div>
-            <div>Velocidade: <strong id="runCalcSpeed" style="color: var(--accent-green); font-size: 0.85rem;">-</strong></div>
-            <div>Calorias est.: <strong id="runCalcCalories" style="color: #60a5fa; font-size: 0.85rem;">-</strong></div>
+        <!-- GPS Status Bar -->
+        <div class="map-gps-status" id="gpsStatusContainer">
+          <span class="gps-pulse-dot" id="gpsPulseDot"></span>
+          <span id="gpsStatusText">GPS pronto. Toque em Iniciar e comece a correr!</span>
+        </div>
+
+        <!-- Leaflet Map Container -->
+        <div id="runMap">
+          <div class="map-control-overlay">
+            <button class="map-btn" type="button" id="btnToggleMapLayer" onclick="toggleMapTiles()">
+              🛰️ Satélite
+            </button>
+            <button class="map-btn" type="button" onclick="centerMapOnCurrentPos()">
+              🎯 Minha Posição
+            </button>
           </div>
+        </div>
 
-          <button type="submit" class="btn btn-primary btn-full">
-            💾 Salvar Corrida & Pontuar (+ horas de treino)
+        <!-- Live Controls -->
+        <div style="display: flex; gap: 8px; margin-bottom: 18px;">
+          <button class="btn btn-primary btn-full" id="btnGpsStart" style="padding: 14px; font-size: 1rem;" onclick="startGpsRun()">
+            ▶ Iniciar Corrida GPS
           </button>
-        </form>
+          <button class="btn btn-outline" id="btnGpsPause" style="display: none; padding: 12px 16px;" onclick="pauseGpsRun()">
+            ⏸ Pausar
+          </button>
+          <button class="btn btn-primary" id="btnGpsResume" style="display: none; padding: 12px 16px;" onclick="resumeGpsRun()">
+            ▶ Continuar
+          </button>
+          <button class="btn btn-orange" id="btnGpsFinish" style="display: none; padding: 12px 16px;" onclick="finishGpsRun()">
+            🏁 Finalizar & Salvar
+          </button>
+          <button class="btn btn-danger" id="btnGpsCancel" style="display: none; padding: 12px;" title="Cancelar" onclick="cancelGpsRun()">
+            ✕
+          </button>
+        </div>
+
+      </div>
+
+      <!-- VIEW B: REGISTRO MANUAL (ESTEIRA / INDOOR) -->
+      <div id="runManualView" style="display: none;">
+        <div class="card">
+          <div class="card-title">Registrar Corrida de Hoje (Esteira)</div>
+          <form id="runForm" onsubmit="handleSaveRun(event)">
+            <div class="form-row">
+              <div class="form-group">
+                <label>Distância (Km)</label>
+                <input type="number" id="runInputKm" step="0.01" min="0.1" placeholder="Ex: 5.2" required oninput="calcRunPace()">
+              </div>
+              <div class="form-group">
+                <label>Tempo (Minutos)</label>
+                <input type="number" id="runInputMinutes" min="1" placeholder="Ex: 28" required oninput="calcRunPace()">
+              </div>
+            </div>
+
+            <div style="background: rgba(255,255,255,0.03); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 14px; display: flex; justify-content: space-around; font-size: 0.75rem;">
+              <div>Ritmo (Pace): <strong id="runCalcPace" style="color: var(--accent-orange); font-size: 0.85rem;">-</strong></div>
+              <div>Velocidade: <strong id="runCalcSpeed" style="color: var(--accent-green); font-size: 0.85rem;">-</strong></div>
+              <div>Calorias est.: <strong id="runCalcCalories" style="color: #60a5fa; font-size: 0.85rem;">-</strong></div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-full">
+              💾 Salvar Corrida Manual & Pontuar (+ horas de treino)
+            </button>
+          </form>
+        </div>
       </div>
 
       <!-- Running History -->
       <div class="card">
-        <div class="card-title">Histórico de Corridas</div>
+        <div class="card-title">Histórico de Corridas & Rotas</div>
         <div id="runningHistoryList">
           <p style="color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 10px 0;">
             Nenhuma corrida registrada ainda. Amarre os tênis e bora! 👟
@@ -769,6 +848,19 @@
       <button class="btn btn-primary btn-full" style="margin-top: 10px;" onclick="closeThemeModal()">
         ✓ Concluir e Manter Cor
       </button>
+    </div>
+  </div>
+
+  <!-- MODAL: VER ROTA DA CORRIDA NO MAPA (ESTILO STRAVA) -->
+  <div class="modal-backdrop" id="routeModal">
+    <div class="modal-box" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3 id="routeModalTitle">🗺️ Rota da Corrida</h3>
+        <button class="btn-icon" onclick="closeRouteModal()">✕</button>
+      </div>
+      <div id="routeModalDetails" style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 8px;"></div>
+      <div id="routeModalMap"></div>
+      <button class="btn btn-primary btn-full" onclick="closeRouteModal()">Fechar Mapa</button>
     </div>
   </div>
 
