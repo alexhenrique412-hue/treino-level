@@ -29,16 +29,19 @@
           <small style="color: var(--text-muted); font-size: 0.72rem;">Clique para editar perfil</small>
         </div>
       </div>
-      <div style="display: flex; align-items: center; gap: 8px;">
-        <button class="btn btn-outline" id="headerInstallBtn" style="padding: 4px 10px; font-size: 0.72rem; border-color: var(--accent-green); color: var(--accent-green); display: flex; align-items: center; gap: 4px;" onclick="openInstallModal()">
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <button class="btn btn-outline" id="headerInstallBtn" style="padding: 4px 8px; font-size: 0.72rem; border-color: var(--accent-green); color: var(--accent-green); display: flex; align-items: center; gap: 4px;" onclick="openInstallModal()">
           <span>📲</span> Instalar
+        </button>
+        <button class="btn-icon" style="border-radius: 50%; width: 34px; height: 34px; font-size: 0.95rem;" title="Mudar Cores / Temas do App" onclick="openThemeModal()">
+          🎨
         </button>
         <button class="btn-icon" style="border-radius: 50%; width: 34px; height: 34px; font-size: 0.9rem;" title="Sobre o aplicativo" onclick="openAboutModal()">
           ℹ️
         </button>
         <div class="header-streak" title="Sequência de dias treinando">
           <span>🔥</span>
-          <span id="headerStreakCount">1</span> dias
+          <span id="headerStreakCount">1</span>
         </div>
       </div>
     </header>
@@ -454,13 +457,48 @@
   <div class="modal-backdrop" id="profileModal">
     <div class="modal-box">
       <div class="modal-header">
-        <h3>Meu Perfil de Treino</h3>
+        <h3 style="display: flex; align-items: center; gap: 8px;">
+          <span>👤</span> Meu Perfil de Treino
+        </h3>
         <button class="btn-icon" onclick="closeProfileModal()">✕</button>
       </div>
       <form id="profileForm" onsubmit="handleSaveProfile(event)">
+        
+        <!-- Foto / Imagem de Perfil -->
+        <div class="profile-photo-section">
+          <div class="profile-avatar-wrap" onclick="document.getElementById('profilePhotoInput').click()" title="Toque para mudar a foto">
+            <div class="profile-avatar-preview" id="modalAvatarPreview">
+              <span id="modalAvatarChar">A</span>
+            </div>
+            <div class="profile-avatar-badge-btn" title="Escolher Foto">📷</div>
+          </div>
+
+          <input type="file" id="profilePhotoInput" accept="image/*" style="display: none;" onchange="handleProfilePhotoSelected(event)">
+
+          <div style="display: flex; gap: 8px; width: 100%; justify-content: center;">
+            <button type="button" class="btn btn-outline" style="padding: 6px 14px; font-size: 0.78rem;" onclick="document.getElementById('profilePhotoInput').click()">
+              📁 Carregar Foto da Galeria
+            </button>
+            <button type="button" class="btn btn-danger" id="btnRemovePhoto" style="padding: 6px 10px; font-size: 0.78rem; display: none;" onclick="removeProfilePhoto()" title="Remover Foto">
+              ✕
+            </button>
+          </div>
+
+          <div class="avatar-presets-title">Ou escolha um avatar temático:</div>
+          <div class="avatar-presets-row">
+            <button type="button" class="preset-avatar-btn" onclick="selectPresetAvatar('🥋')" title="Samurai">🥋</button>
+            <button type="button" class="preset-avatar-btn" onclick="selectPresetAvatar('🦁')" title="Leão">🦁</button>
+            <button type="button" class="preset-avatar-btn" onclick="selectPresetAvatar('🦍')" title="Gorila">🦍</button>
+            <button type="button" class="preset-avatar-btn" onclick="selectPresetAvatar('🦾')" title="Ciborgue">🦾</button>
+            <button type="button" class="preset-avatar-btn" onclick="selectPresetAvatar('⚡')" title="Raio">⚡</button>
+            <button type="button" class="preset-avatar-btn" onclick="selectPresetAvatar('🐺')" title="Lobo">🐺</button>
+            <button type="button" class="preset-avatar-btn" onclick="selectPresetAvatar('👑')" title="Lenda">👑</button>
+          </div>
+        </div>
+
         <div class="form-group">
           <label>Seu Nome / Apelido</label>
-          <input type="text" id="profileNameInput" required value="Guerreiro">
+          <input type="text" id="profileNameInput" required value="Guerreiro" oninput="handleProfileNameChange()">
         </div>
         <div class="form-group">
           <label>Meta Principal</label>
@@ -584,6 +622,98 @@
       </div>
 
       <button class="btn btn-outline btn-full" onclick="closeInstallModal()">Fechar</button>
+    </div>
+  </div>
+
+  <!-- MODAL: ESCOLHER TEMA / CORES DO APP -->
+  <div class="modal-backdrop" id="themeModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 style="display: flex; align-items: center; gap: 8px;">
+          <span>🎨</span> Cores do Aplicativo
+        </h3>
+        <button class="btn-icon" onclick="closeThemeModal()">✕</button>
+      </div>
+
+      <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px;">
+        Toque em qualquer cor para ver a <strong style="color: #fff;">mudança instantânea em tempo real</strong>:
+      </p>
+
+      <!-- 1. Verde Cyber -->
+      <div class="theme-option-card" id="theme-card-green" onclick="previewAndSelectTheme('green')">
+        <div>
+          <div style="font-weight: 800; font-size: 0.9rem; color: #fff;">🟢 Verde Cyber (Padrão)</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted);">Estilo Whoop & Spotify Fitness</div>
+        </div>
+        <div class="theme-swatches">
+          <span class="theme-swatch" style="background: #10b981;"></span>
+          <span class="theme-swatch" style="background: #182030;"></span>
+        </div>
+      </div>
+
+      <!-- 2. Laranja Lava -->
+      <div class="theme-option-card" id="theme-card-orange" onclick="previewAndSelectTheme('orange')">
+        <div>
+          <div style="font-weight: 800; font-size: 0.9rem; color: #fff;">🟠 Laranja Lava & Fogo</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted);">Estilo Nike & Strava Energia</div>
+        </div>
+        <div class="theme-swatches">
+          <span class="theme-swatch" style="background: #f97316;"></span>
+          <span class="theme-swatch" style="background: #221a14;"></span>
+        </div>
+      </div>
+
+      <!-- 3. Roxo Cyberpunk -->
+      <div class="theme-option-card" id="theme-card-purple" onclick="previewAndSelectTheme('purple')">
+        <div>
+          <div style="font-weight: 800; font-size: 0.9rem; color: #fff;">🟣 Roxo Monstro (Cyberpunk)</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted);">Modo Beast / Força Noturna</div>
+        </div>
+        <div class="theme-swatches">
+          <span class="theme-swatch" style="background: #a855f7;"></span>
+          <span class="theme-swatch" style="background: #1c1530;"></span>
+        </div>
+      </div>
+
+      <!-- 4. Vermelho Sangue -->
+      <div class="theme-option-card" id="theme-card-red" onclick="previewAndSelectTheme('red')">
+        <div>
+          <div style="font-weight: 800; font-size: 0.9rem; color: #fff;">🔴 Vermelho Hardcore</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted);">Estilo Gymshark / Sangue nos Olhos</div>
+        </div>
+        <div class="theme-swatches">
+          <span class="theme-swatch" style="background: #ef4444;"></span>
+          <span class="theme-swatch" style="background: #221316;"></span>
+        </div>
+      </div>
+
+      <!-- 5. Azul Ciano -->
+      <div class="theme-option-card" id="theme-card-blue" onclick="previewAndSelectTheme('blue')">
+        <div>
+          <div style="font-weight: 800; font-size: 0.9rem; color: #fff;">🔵 Azul Elétrico & Foco</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted);">Estilo Garmin / Foco & Condicionamento</div>
+        </div>
+        <div class="theme-swatches">
+          <span class="theme-swatch" style="background: #06b6d4;"></span>
+          <span class="theme-swatch" style="background: #132238;"></span>
+        </div>
+      </div>
+
+      <!-- 6. Dourado Titã -->
+      <div class="theme-option-card" id="theme-card-gold" onclick="previewAndSelectTheme('gold')">
+        <div>
+          <div style="font-weight: 800; font-size: 0.9rem; color: #fff;">🟡 Ouro Titã & Campeão</div>
+          <div style="font-size: 0.72rem; color: var(--text-muted);">Estilo Gold's Gym / Troféu Olímpico</div>
+        </div>
+        <div class="theme-swatches">
+          <span class="theme-swatch" style="background: #eab308;"></span>
+          <span class="theme-swatch" style="background: #232014;"></span>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-full" style="margin-top: 10px;" onclick="closeThemeModal()">
+        ✓ Concluir e Manter Cor
+      </button>
     </div>
   </div>
 

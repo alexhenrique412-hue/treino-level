@@ -20,6 +20,66 @@
   --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
+/* THEME: LAVA ORANGE (Fogo e Energia) */
+body[data-theme="orange"] {
+  --bg-primary: #0d0a08;
+  --bg-secondary: #18120e;
+  --bg-card: #221a14;
+  --bg-card-hover: #2c221a;
+  --accent-green: #f97316;
+  --accent-green-glow: rgba(249, 115, 22, 0.4);
+  --accent-orange: #fbbf24;
+  --border-color: rgba(249, 115, 22, 0.15);
+}
+
+/* THEME: PURPLE CYBERPUNK (Modo Monstro / Beast) */
+body[data-theme="purple"] {
+  --bg-primary: #0a0711;
+  --bg-secondary: #130e20;
+  --bg-card: #1c1530;
+  --bg-card-hover: #261d40;
+  --accent-green: #a855f7;
+  --accent-green-glow: rgba(168, 85, 247, 0.4);
+  --accent-orange: #ec4899;
+  --border-color: rgba(168, 85, 247, 0.15);
+}
+
+/* THEME: CRIMSON RED (Maromba Hardcore / Sangue nos Olhos) */
+body[data-theme="red"] {
+  --bg-primary: #0d0607;
+  --bg-secondary: #170d0f;
+  --bg-card: #221316;
+  --bg-card-hover: #2d191d;
+  --accent-green: #ef4444;
+  --accent-green-glow: rgba(239, 68, 68, 0.4);
+  --accent-orange: #f97316;
+  --border-color: rgba(239, 68, 68, 0.15);
+}
+
+/* THEME: ELECTRIC BLUE (Azul Ciano / Foco Total) */
+body[data-theme="blue"] {
+  --bg-primary: #060b13;
+  --bg-secondary: #0d1726;
+  --bg-card: #132238;
+  --bg-card-hover: #1b2e4b;
+  --accent-green: #06b6d4;
+  --accent-green-glow: rgba(6, 182, 212, 0.4);
+  --accent-orange: #3b82f6;
+  --border-color: rgba(6, 182, 212, 0.15);
+}
+
+/* THEME: GOLD LEGEND (Dourado Campeão / Titã) */
+body[data-theme="gold"] {
+  --bg-primary: #0d0c07;
+  --bg-secondary: #18160e;
+  --bg-card: #232014;
+  --bg-card-hover: #2e2a1b;
+  --accent-green: #eab308;
+  --accent-green-glow: rgba(234, 179, 8, 0.4);
+  --accent-orange: #f59e0b;
+  --border-color: rgba(234, 179, 8, 0.15);
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -723,6 +783,139 @@ input, select, textarea {
 .btn:active, .exercise-checkbox:active, .btn-icon:active, .day-btn:active {
   transform: scale(0.95);
   transition: transform 0.08s ease;
+}
+
+/* Theme Selector Cards & Swatches */
+.theme-option-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.04);
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  cursor: pointer;
+  margin-bottom: 10px;
+  transition: all 0.2s;
+}
+
+.theme-option-card:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.theme-option-card.active {
+  border-color: var(--accent-green);
+  background: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 0 15px var(--accent-green-glow);
+}
+
+.theme-swatches {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.theme-swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Profile Photo & Avatar Customization */
+.profile-photo-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.profile-avatar-wrap {
+  position: relative;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+
+.profile-avatar-preview {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent-green), #3b82f6);
+  border: 3px solid var(--accent-green);
+  box-shadow: 0 0 20px var(--accent-green-glow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 2.2rem;
+  color: #fff;
+  overflow: hidden;
+}
+
+.profile-avatar-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+}
+
+.profile-avatar-badge-btn {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 2px solid var(--accent-green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.avatar-presets-title {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin: 12px 0 6px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.avatar-presets-row {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.preset-avatar-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.preset-avatar-btn:hover, .preset-avatar-btn:active {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: var(--accent-green);
+  transform: scale(1.1);
 }
 
 .nav-btn {

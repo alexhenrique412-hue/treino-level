@@ -187,7 +187,9 @@ const STATE = {
   user: {
     name: "Guerreiro",
     goal: "Hipertrofia",
-    avatar: "G"
+    avatar: "G",
+    theme: "green",
+    photo: null
   },
   // All-time totals:
   totalMinutes: 0, // Minutes trained (2h = 120min = 1 point)
@@ -833,6 +835,42 @@ function checkStandaloneMode() {
   }
 }
 
+// --- THEME PICKER & LIVE PREVIEW ---
+function applyTheme(themeName) {
+  STATE.user.theme = themeName || 'green';
+  document.body.dataset.theme = (themeName === 'green' || !themeName) ? '' : themeName;
+
+  const themeIds = ['green', 'orange', 'purple', 'red', 'blue', 'gold'];
+  themeIds.forEach(t => {
+    const card = document.getElementById(`theme-card-${t}`);
+    if (card) {
+      if (t === (themeName || 'green')) {
+        card.classList.add('active');
+      } else {
+        card.classList.remove('active');
+      }
+    }
+  });
+
+  saveState();
+}
+
+function openThemeModal() {
+  triggerHaptic('light');
+  applyTheme(STATE.user.theme || 'green');
+  document.getElementById('themeModal').classList.add('open');
+}
+
+function closeThemeModal() {
+  triggerHaptic('medium');
+  document.getElementById('themeModal').classList.remove('open');
+}
+
+function previewAndSelectTheme(themeName) {
+  triggerHaptic('success');
+  applyTheme(themeName);
+}
+
 // --- ABOUT MODAL ---
 function openAboutModal() {
   document.getElementById("aboutModal").classList.add("open");
@@ -842,14 +880,86 @@ function closeAboutModal() {
   document.getElementById("aboutModal").classList.remove("open");
 }
 
-// --- PROFILE MODAL ---
+// --- PROFILE MODAL & PHOTO UPLOAD ---
+let tempProfilePhoto = null;
+
+function handleProfilePhotoSelected(e) {
+  const file = e.target.files && e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    const img = new Image();
+    img.onload = function() {
+      // Crop square and resize to 256x256 for fast local storage
+      const canvas = document.createElement("canvas");
+      const maxDim = 256;
+      const minSide = Math.min(img.width, img.height);
+      const startX = (img.width - minSide) / 2;
+      const startY = (img.height - minSide) / 2;
+
+      canvas.width = maxDim;
+      canvas.height = maxDim;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, startX, startY, minSide, minSide, 0, 0, maxDim, maxDim);
+
+      tempProfilePhoto = canvas.toDataURL("image/jpeg", 0.85);
+      renderModalAvatarPreview();
+      triggerHaptic("success");
+    };
+    img.src = evt.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeProfilePhoto() {
+  tempProfilePhoto = "";
+  renderModalAvatarPreview();
+  triggerHaptic("light");
+}
+
+function selectPresetAvatar(emoji) {
+  tempProfilePhoto = emoji;
+  renderModalAvatarPreview();
+  triggerHaptic("light");
+}
+
+function handleProfileNameChange() {
+  const photo = tempProfilePhoto !== null ? tempProfilePhoto : (STATE.user.photo || "");
+  if (!photo || (!photo.startsWith("data:image") && photo.length > 4)) {
+    renderModalAvatarPreview();
+  }
+}
+
+function renderModalAvatarPreview() {
+  const preview = document.getElementById("modalAvatarPreview");
+  const btnRemove = document.getElementById("btnRemovePhoto");
+  const photo = tempProfilePhoto !== null ? tempProfilePhoto : (STATE.user.photo || "");
+
+  if (photo && photo.startsWith("data:image")) {
+    preview.innerHTML = `<img src="${photo}" alt="Foto de Perfil">`;
+    if (btnRemove) btnRemove.style.display = "inline-flex";
+  } else if (photo && photo.length <= 4 && photo !== "") {
+    preview.innerHTML = `<span style="font-size: 2.3rem;">${photo}</span>`;
+    if (btnRemove) btnRemove.style.display = "inline-flex";
+  } else {
+    const nameInput = document.getElementById("profileNameInput");
+    const name = (nameInput && nameInput.value.trim()) || STATE.user.name || "G";
+    preview.innerHTML = `<span>${name.charAt(0).toUpperCase()}</span>`;
+    if (btnRemove) btnRemove.style.display = "none";
+  }
+}
+
 function openProfileModal() {
   document.getElementById("profileNameInput").value = STATE.user.name;
   document.getElementById("profileGoalInput").value = STATE.user.goal;
+  tempProfilePhoto = STATE.user.photo || null;
+  renderModalAvatarPreview();
   document.getElementById("profileModal").classList.add("open");
 }
 
 function closeProfileModal() {
+  tempProfilePhoto = null;
   document.getElementById("profileModal").classList.remove("open");
 }
 
@@ -859,10 +969,22 @@ function handleSaveProfile(e) {
   const goal = document.getElementById("profileGoalInput").value;
   STATE.user.name = name;
   STATE.user.goal = goal;
-  STATE.user.avatar = name.charAt(0).toUpperCase();
+
+  if (tempProfilePhoto !== null) {
+    STATE.user.photo = tempProfilePhoto;
+  }
+
+  if (STATE.user.photo && STATE.user.photo.length <= 4) {
+    STATE.user.avatar = STATE.user.photo;
+  } else {
+    STATE.user.avatar = name.charAt(0).toUpperCase();
+  }
+
   saveState();
   closeProfileModal();
   renderAll();
+  triggerHaptic("success");
+  sfx.playCheck();
 }
 
 // --- LEVEL UP CELEBRATION MODAL & CONFETTI ---
@@ -955,7 +1077,18 @@ function switchTab(tabId) {
 
 // --- RENDER FUNCTIONS ---
 function renderHeader() {
-  document.getElementById("headerAvatar").innerText = STATE.user.avatar || "A";
+  const avatarEl = document.getElementById("headerAvatar");
+  const photo = STATE.user.photo;
+
+  if (photo && photo.startsWith("data:image")) {
+    avatarEl.innerHTML = `<img src="${photo}" alt="Foto" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;">`;
+  } else if (photo && photo.length <= 4 && photo !== "") {
+    avatarEl.innerHTML = `<span style="font-size: 1.35rem;">${photo}</span>`;
+  } else {
+    const initial = (STATE.user.avatar || STATE.user.name || "G").charAt(0).toUpperCase();
+    avatarEl.innerHTML = `<span>${initial}</span>`;
+  }
+
   document.getElementById("headerUserName").innerHTML = `${STATE.user.name} <span class="level-tag" id="headerLevelTag">NÍVEL ${STATE.currentLevel}</span>`;
   document.getElementById("headerStreakCount").innerText = STATE.streakDays || 1;
 }
@@ -1210,9 +1343,38 @@ function generateDailyShareCard() {
   ctx.fillText(new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' }), 40, 92);
 
   // User Profile Row
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto";
-  ctx.fillText(STATE.user.name.toUpperCase(), 40, 150);
+  const photo = STATE.user.photo;
+  if (photo && photo.startsWith("data:image")) {
+    const userImg = new Image();
+    userImg.src = photo;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(66, 138, 26, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
+    ctx.drawImage(userImg, 40, 112, 52, 52);
+    ctx.restore();
+
+    ctx.strokeStyle = "#10b981";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(66, 138, 26, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 32px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto";
+    ctx.fillText(STATE.user.name.toUpperCase(), 106, 148);
+  } else if (photo && photo.length <= 4 && photo !== "") {
+    ctx.font = "38px system-ui";
+    ctx.fillText(photo, 40, 148);
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 32px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto";
+    ctx.fillText(STATE.user.name.toUpperCase(), 92, 148);
+  } else {
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 34px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto";
+    ctx.fillText(STATE.user.name.toUpperCase(), 40, 150);
+  }
 
   const currentLevelObj = getLevelForPoints(STATE.totalPoints);
 
@@ -1388,6 +1550,7 @@ function renderAll() {
 // --- INIT APP ---
 window.addEventListener("DOMContentLoaded", () => {
   loadState();
+  applyTheme(STATE.user.theme || 'green');
   checkDateTurnover();
   checkStandaloneMode();
   STATE.activeDayIndex = getCurrentDayOfWeekIndex();
