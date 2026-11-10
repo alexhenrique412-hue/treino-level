@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>IronLevel - Treino, Níveis & Corrida</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#121824">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="IronLevel">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Confetti Canvas for Level Up Celebration -->
+  <canvas id="confettiCanvas"></canvas>
+
+  <div class="app-container">
+    
+    <!-- Top Header -->
+    <header class="app-header">
+      <div class="header-user" onclick="openProfileModal()">
+        <div class="user-avatar" id="headerAvatar">A</div>
+        <div class="user-info">
+          <h2 id="headerUserName">Guerreiro <span class="level-tag" id="headerLevelTag">NÍVEL 1</span></h2>
+          <small style="color: var(--text-muted); font-size: 0.72rem;">Clique para editar perfil</small>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <button class="btn-icon" style="border-radius: 50%; width: 34px; height: 34px; font-size: 0.9rem;" title="Sobre o aplicativo" onclick="openAboutModal()">
+          ℹ️
+        </button>
+        <div class="header-streak" title="Sequência de dias treinando">
+          <span>🔥</span>
+          <span id="headerStreakCount">1</span> dias
+        </div>
+      </div>
+    </header>
+
+    <!-- TAB 1: INÍCIO (DASHBOARD & NÍVEL) -->
+    <main id="tab-home" class="tab-content active">
+      
+      <!-- Level Hero Box -->
+      <section class="card level-hero">
+        <div class="level-icon-badge" id="heroLevelBadge">🥉</div>
+        <h1 id="heroLevelName">Nível 1: Novato de Ferro</h1>
+        <div class="rank-subtitle" id="heroLevelRank">Iniciando a Jornada</div>
+
+        <div class="progress-container">
+          <div class="progress-bar" id="heroLevelProgressBar" style="width: 10%;"></div>
+        </div>
+        <div class="progress-labels">
+          <span id="heroCurrentPoints">0.0 Pontos</span>
+          <span id="heroNextLevelPoints">Próximo: 2.0 Pontos</span>
+        </div>
+
+        <!-- Pontos Rule Info (2 Horas = 1 Ponto) -->
+        <div class="points-rule-box">
+          <div>
+            <span>⏱️ <strong>2 horas de treino</strong> = <strong>1 Ponto</strong></span>
+            <div style="color: var(--text-muted); font-size: 0.7rem; margin-top: 2px;">
+              Cada minuto de musculação e corrida conta!
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 1.1rem; font-weight: 800; color: var(--accent-orange);" id="heroTotalHoursDisplay">0h 0m</div>
+            <div style="font-size: 0.65rem; color: var(--text-muted);">Total treinado</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Desafio Diário (Sistema de Desafio por Dia) -->
+      <section class="challenge-card">
+        <div class="challenge-header">
+          <span class="challenge-tag">⚡ DESAFIO DE HOJE</span>
+          <span style="font-size: 0.75rem; color: var(--accent-orange); font-weight: 700;" id="challengeStatusBadge">Em Andamento</span>
+        </div>
+        <div class="challenge-text" id="challengeTitle">Treine pelo menos 40 minutos hoje!</div>
+        <div class="progress-container" style="margin: 6px 0 8px;">
+          <div class="progress-bar" id="challengeProgressBar" style="width: 0%; background: linear-gradient(90deg, #f59e0b, #ef4444);"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem;">
+          <span style="color: var(--text-muted);" id="challengeProgressText">0 / 40 min concluídos</span>
+          <button class="btn btn-orange" style="padding: 4px 10px; font-size: 0.7rem;" id="btnCompleteChallenge" onclick="claimDailyChallenge()">Concluir</button>
+        </div>
+      </section>
+
+      <!-- Resumo do Dia (Quantas vezes treinou hoje, km, etc.) -->
+      <div class="card-title">
+        <span>Hoje (<span id="todayDateStr">09/11</span>)</span>
+        <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.7rem;" onclick="openQuickSessionModal()">+ Registrar Treino</button>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-item">
+          <span class="stat-label">Sessões Hoje</span>
+          <span class="stat-value" id="todaySessionsCount">0</span>
+          <span class="stat-desc" id="todaySessionsDesc">Nenhum treino hoje</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Tempo Total Hoje</span>
+          <span class="stat-value" id="todayDurationTotal">0 min</span>
+          <span class="stat-desc">+<span id="todayPointsGained">0.0</span> pts hoje</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Corrida Hoje</span>
+          <span class="stat-value" id="todayKmTotal">0.0 km</span>
+          <span class="stat-desc" id="todayRunTime">0 min cardio</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Pontos Acumulados</span>
+          <span class="stat-value" id="totalPointsSummary" style="color: var(--accent-green);">0.0</span>
+          <span class="stat-desc">Faltam <span id="hoursToNextPt">2h 00m</span> p/ próx pt</span>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+        <button class="btn btn-primary btn-full" onclick="switchTab('workout')">
+          🏋️‍♂️ Iniciar Treino de Hoje
+        </button>
+        <button class="btn btn-outline btn-full" onclick="switchTab('running')">
+          🏃 Registrar Corrida
+        </button>
+      </div>
+
+      <!-- Treinos Realizados Hoje (Lista de Sessões do Dia) -->
+      <section class="card">
+        <div class="card-title">
+          <span>Sessões Realizadas Hoje</span>
+          <span style="font-size: 0.75rem; color: var(--text-muted);" id="todaySessionsBadge">0 sessões</span>
+        </div>
+        <div id="todaySessionsList">
+          <p style="color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 12px 0;">
+            Você ainda não registrou nenhum treino hoje. Bora treinar! 💪
+          </p>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- TAB 2: TREINOS (MONTAR E EXECUTAR TREINO DO DIA) -->
+    <section id="tab-workout" class="tab-content">
+      
+      <!-- Day Selector (Segunda a Domingo) -->
+      <div class="days-bar" id="daysBar">
+        <!-- Rendered by JS -->
+      </div>
+
+      <!-- Active Day Header -->
+      <div class="card card-highlight">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <div>
+            <span style="font-size: 0.7rem; color: var(--accent-green); font-weight: 800; text-transform: uppercase;" id="workoutDayLabel">Segunda-feira</span>
+            <h2 style="font-size: 1.25rem; font-weight: 800; margin: 4px 0;" id="workoutDayTitle">Peito & Tríceps</h2>
+          </div>
+          <button class="btn-icon" title="Editar título do treino" onclick="editWorkoutTitle()">
+            ✏️
+          </button>
+        </div>
+      </div>
+
+      <!-- Live Workout Timer -->
+      <div class="live-timer-card">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 0.75rem; color: #93c5fd; font-weight: 700; text-transform: uppercase;">⏱️ Cronômetro da Sessão</span>
+          <span style="font-size: 0.7rem; color: var(--text-muted);" id="timerPointsEstimate">+0.0 pt</span>
+        </div>
+        <div class="timer-digits" id="liveTimerDisplay">00:00:00</div>
+        <div class="timer-controls">
+          <button class="btn btn-primary" id="btnTimerStart" onclick="toggleWorkoutTimer()">▶ Iniciar</button>
+          <button class="btn btn-outline" id="btnTimerPause" onclick="pauseWorkoutTimer()" style="display:none;">⏸ Pausar</button>
+          <button class="btn btn-orange" id="btnTimerFinish" onclick="finishWorkoutTimer()" style="display:none;">🏁 Finalizar & Pontuar</button>
+          <button class="btn btn-danger" id="btnTimerReset" onclick="resetWorkoutTimer()" style="display:none;">✕</button>
+        </div>
+        <small style="color: var(--text-muted); font-size: 0.68rem; display: block; margin-top: 8px;">
+          Ao finalizar, o tempo é somado às suas horas e convertido em pontos (2h = 1 pt)!
+        </small>
+      </div>
+
+      <!-- Rest Timer Quick Trigger -->
+      <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 14px; background: var(--bg-card); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
+        <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">Descanso:</span>
+        <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.7rem;" onclick="startRestTimer(30)">30s</button>
+        <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.7rem;" onclick="startRestTimer(60)">60s</button>
+        <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.7rem;" onclick="startRestTimer(90)">90s</button>
+        <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.7rem;" onclick="startRestTimer(120)">2min</button>
+      </div>
+
+      <!-- Exercise List Header & Add Button -->
+      <div class="card-title">
+        <span>Exercícios do Dia (<span id="exerciseCountBadge">0</span>)</span>
+        <button class="btn btn-primary" style="padding: 6px 12px; font-size: 0.75rem;" onclick="openAddExerciseModal()">
+          + Adicionar Exercício
+        </button>
+      </div>
+
+      <!-- Exercise List Container -->
+      <div id="exerciseListContainer">
+        <!-- Rendered by JS -->
+      </div>
+
+    </section>
+
+    <!-- TAB 3: CORRIDA (CARDIO, TEMPO & KM) -->
+    <section id="tab-running" class="tab-content">
+      
+      <!-- Run Hero / Stats -->
+      <div class="run-stats-card">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h2 style="font-size: 1.15rem; font-weight: 800;">🏃‍♂️ Monitor de Corrida</h2>
+          <span style="font-size: 0.75rem; color: var(--accent-red); font-weight: 700;">Cardio & Km</span>
+        </div>
+        <p style="color: var(--text-muted); font-size: 0.75rem; margin-top: 4px;">
+          Registre seu tempo e km corridos. O tempo de corrida soma diretamente nas suas 2 horas para ganhar pontos!
+        </p>
+
+        <div class="run-grid">
+          <div class="run-grid-item">
+            <div class="label">Km Hoje</div>
+            <div class="val" id="runHeroKmToday">0.0</div>
+          </div>
+          <div class="run-grid-item">
+            <div class="label">Tempo Corrida</div>
+            <div class="val" id="runHeroTimeToday">0m</div>
+          </div>
+          <div class="run-grid-item">
+            <div class="label">Km Total Geral</div>
+            <div class="val" id="runHeroKmTotal">0.0</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Register Run Form -->
+      <div class="card">
+        <div class="card-title">Registrar Corrida de Hoje</div>
+        <form id="runForm" onsubmit="handleSaveRun(event)">
+          <div class="form-row">
+            <div class="form-group">
+              <label>Distância (Km)</label>
+              <input type="number" id="runInputKm" step="0.01" min="0.1" placeholder="Ex: 5.2" required oninput="calcRunPace()">
+            </div>
+            <div class="form-group">
+              <label>Tempo (Minutos)</label>
+              <input type="number" id="runInputMinutes" min="1" placeholder="Ex: 28" required oninput="calcRunPace()">
+            </div>
+          </div>
+
+          <div style="background: rgba(255,255,255,0.03); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 14px; display: flex; justify-content: space-around; font-size: 0.75rem;">
+            <div>Ritmo (Pace): <strong id="runCalcPace" style="color: var(--accent-orange); font-size: 0.85rem;">-</strong></div>
+            <div>Velocidade: <strong id="runCalcSpeed" style="color: var(--accent-green); font-size: 0.85rem;">-</strong></div>
+            <div>Calorias est.: <strong id="runCalcCalories" style="color: #60a5fa; font-size: 0.85rem;">-</strong></div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-full">
+            💾 Salvar Corrida & Pontuar (+ horas de treino)
+          </button>
+        </form>
+      </div>
+
+      <!-- Running History -->
+      <div class="card">
+        <div class="card-title">Histórico de Corridas</div>
+        <div id="runningHistoryList">
+          <p style="color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 10px 0;">
+            Nenhuma corrida registrada ainda. Amarre os tênis e bora! 👟
+          </p>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- TAB 4: DESAFIOS & NÍVEIS -->
+    <section id="tab-levels" class="tab-content">
+      
+      <div class="card-title">
+        <span>🏆 Tabela de Níveis & Patentes</span>
+      </div>
+
+      <!-- All Levels Hierarchy -->
+      <div id="levelsHierarchyList">
+        <!-- Rendered by JS -->
+      </div>
+
+      <!-- Badges / Conquistas -->
+      <div class="card-title" style="margin-top: 20px;">
+        <span>🎖️ Conquistas Desbloqueáveis</span>
+      </div>
+      <div id="badgesGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <!-- Rendered by JS -->
+      </div>
+
+    </section>
+
+    <!-- TAB 5: COMPARTILHAR DADOS DO DIA -->
+    <section id="tab-share" class="tab-content">
+      
+      <div class="card-title">
+        <span>📲 Compartilhar Treino do Dia</span>
+      </div>
+
+      <p style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 12px;">
+        Gere um card visual estiloso (formato Story / WhatsApp) com seu nível, tempo treinado, exercícios concluídos e km corridos!
+      </p>
+
+      <!-- Canvas Preview Area -->
+      <div class="share-canvas-container">
+        <canvas id="shareCanvas" width="720" height="960"></canvas>
+      </div>
+
+      <!-- Action Buttons -->
+      <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 14px;">
+        <button class="btn btn-primary btn-full" onclick="shareDailyCard()">
+          🚀 Compartilhar no WhatsApp / Redes Sociais
+        </button>
+        <button class="btn btn-outline btn-full" onclick="downloadShareCard()">
+          📥 Baixar Imagem (PNG) para Postar
+        </button>
+        <button class="btn btn-outline btn-full" onclick="copyShareText()">
+          📋 Copiar Resumo em Texto
+        </button>
+      </div>
+
+    </section>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav">
+      <button class="nav-btn active" onclick="switchTab('home')" id="nav-home">
+        <svg viewBox="0 0 24 24"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        <span>Início</span>
+      </button>
+      <button class="nav-btn" onclick="switchTab('workout')" id="nav-workout">
+        <svg viewBox="0 0 24 24"><path d="M6 5v14M18 5v14M2 9v6M22 9v6M6 12h12"></path></svg>
+        <span>Treinos</span>
+      </button>
+      <button class="nav-btn" onclick="switchTab('running')" id="nav-running">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"></circle><path d="m15 22-3-7-3 3-3-4"></path><path d="m18 13-3-3 1-3-4-2-2 3"></path></svg>
+        <span>Corrida</span>
+      </button>
+      <button class="nav-btn" onclick="switchTab('levels')" id="nav-levels">
+        <svg viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>
+        <span>Níveis</span>
+      </button>
+      <button class="nav-btn" onclick="switchTab('share')" id="nav-share">
+        <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+        <span>Compartilhar</span>
+      </button>
+    </nav>
+
+  </div>
+
+  <!-- Floating Rest Timer Pill -->
+  <div class="rest-timer-pill" id="restTimerPill">
+    <span style="font-size: 1.2rem;">⏱️</span>
+    <div>
+      <div style="font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase;">Descanso</div>
+      <div style="font-size: 1.1rem; font-weight: 800; color: var(--accent-green); font-family: monospace;" id="restTimerDisplay">00:60</div>
+    </div>
+    <button class="btn-icon" style="margin-left: 8px; width: 26px; height: 26px;" onclick="cancelRestTimer()">✕</button>
+  </div>
+
+  <!-- MODAL: ADD / EDIT EXERCISE -->
+  <div class="modal-backdrop" id="exerciseModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="exerciseModalTitle">Adicionar Exercício</h3>
+        <button class="btn-icon" onclick="closeExerciseModal()">✕</button>
+      </div>
+      <form id="exerciseForm" onsubmit="handleSaveExercise(event)">
+        <input type="hidden" id="exerciseId">
+        <div class="form-group">
+          <label>Nome do Exercício</label>
+          <input type="text" id="exerciseNameInput" placeholder="Ex: Supino Reto com Barra" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Séries</label>
+            <input type="number" id="exerciseSetsInput" min="1" max="20" value="4" required>
+          </div>
+          <div class="form-group">
+            <label>Repetições</label>
+            <input type="text" id="exerciseRepsInput" placeholder="Ex: 10 a 12" value="10-12" required>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Carga (kg)</label>
+            <input type="number" id="exerciseWeightInput" step="0.5" placeholder="Ex: 30" value="0">
+          </div>
+          <div class="form-group">
+            <label>Descanso sugerido</label>
+            <select id="exerciseRestInput">
+              <option value="45">45 segundos</option>
+              <option value="60" selected>60 segundos</option>
+              <option value="90">90 segundos</option>
+              <option value="120">2 minutos</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Observação / Dica</label>
+          <input type="text" id="exerciseNotesInput" placeholder="Ex: Cadência controlada 3s descida">
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Salvar Exercício</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: QUICK SESSION RECORD -->
+  <div class="modal-backdrop" id="quickSessionModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Registrar Treino Manual</h3>
+        <button class="btn-icon" onclick="closeQuickSessionModal()">✕</button>
+      </div>
+      <form id="quickSessionForm" onsubmit="handleSaveQuickSession(event)">
+        <div class="form-group">
+          <label>Tipo de Treino</label>
+          <input type="text" id="quickSessionType" placeholder="Ex: Musculação / Peito e Tríceps" required value="Musculação">
+        </div>
+        <div class="form-group">
+          <label>Duração do Treino (em minutos)</label>
+          <input type="number" id="quickSessionDuration" min="5" placeholder="Ex: 60" required value="60">
+        </div>
+        <div class="points-rule-box" style="margin-bottom: 14px;">
+          <span>⭐ Ganho estimado: <strong id="quickSessionPointsEstimate">0.5 ponto</strong> (2h = 1 pt)</span>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Salvar Treino & Ganhar Pontos</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: PROFILE -->
+  <div class="modal-backdrop" id="profileModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Meu Perfil de Treino</h3>
+        <button class="btn-icon" onclick="closeProfileModal()">✕</button>
+      </div>
+      <form id="profileForm" onsubmit="handleSaveProfile(event)">
+        <div class="form-group">
+          <label>Seu Nome / Apelido</label>
+          <input type="text" id="profileNameInput" required value="Guerreiro">
+        </div>
+        <div class="form-group">
+          <label>Meta Principal</label>
+          <select id="profileGoalInput">
+            <option value="Hipertrofia">Ganho de Massa Muscular (Hipertrofia)</option>
+            <option value="Definição">Emagrecimento & Definição</option>
+            <option value="Força & Performance">Força Pura & Performance</option>
+            <option value="Saúde & Longevidade">Saúde & Condicionamento</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">Salvar Perfil</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: LEVEL UP CELEBRATION -->
+  <div class="modal-backdrop" id="levelUpModal">
+    <div class="modal-box" style="text-align: center; border: 2px solid var(--accent-green); box-shadow: 0 0 35px var(--accent-green-glow);">
+      <div style="font-size: 3.5rem; margin-bottom: 8px;" id="levelUpIcon">🏆</div>
+      <span style="background: var(--accent-green); color: #000; font-weight: 800; font-size: 0.8rem; padding: 4px 12px; border-radius: 12px; text-transform: uppercase;">
+        PARABÉNS! SUBIU DE NÍVEL!
+      </span>
+      <h2 style="font-size: 1.6rem; font-weight: 900; margin: 14px 0 4px; color: #fff;" id="levelUpTitle">NÍVEL 2: RATO DE ACADEMIA</h2>
+      <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;" id="levelUpDesc">
+        Você acumulou horas suficientes de treino e desbloqueou uma nova patente!
+      </p>
+      <button class="btn btn-primary btn-full" onclick="closeLevelUpModal()">
+        🔥 Continuar Focado!
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL: SOBRE O APP -->
+  <div class="modal-backdrop" id="aboutModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 style="display: flex; align-items: center; gap: 8px;">
+          <span>⚡</span> Sobre o IronLevel
+        </h3>
+        <button class="btn-icon" onclick="closeAboutModal()">✕</button>
+      </div>
+      <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;">
+        <p style="margin-bottom: 12px;">
+          O <strong style="color: #fff;">IronLevel</strong> é o seu aplicativo definitivo de treino, corrida e gamificação. Cada minuto de esforço se converte em pontos e evolução!
+        </p>
+
+        <div class="card" style="background: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.25); margin-bottom: 12px; padding: 12px;">
+          <h4 style="color: var(--accent-green); font-size: 0.85rem; margin-bottom: 4px;">⭐ Regra dos Pontos:</h4>
+          <p style="font-size: 0.8rem; color: #fff;">
+            A cada <strong style="color: var(--accent-orange);">2 horas de treino</strong> (musculação + corrida), você ganha <strong style="color: var(--accent-orange);">1 Ponto</strong> para subir de patente.
+          </p>
+        </div>
+
+        <div class="card" style="margin-bottom: 12px; padding: 12px;">
+          <h4 style="color: #60a5fa; font-size: 0.85rem; margin-bottom: 4px;">📲 Instalação no Celular:</h4>
+          <p style="font-size: 0.8rem;">
+            Toque nos <strong>3 pontinhos</strong> do navegador (no Android) ou no botão <strong>Compartilhar</strong> (no iPhone) e escolha <strong>"Adicionar à tela de início"</strong> para usar como app nativo em tela cheia!
+          </p>
+        </div>
+
+        <div style="font-size: 0.72rem; color: var(--text-dark); text-align: center; margin-top: 16px;">
+          IronLevel v1.0 • 100% Offline • Seus dados ficam salvos com segurança no seu aparelho.
+        </div>
+      </div>
+      <button class="btn btn-primary btn-full" style="margin-top: 16px;" onclick="closeAboutModal()">Entendi, bora treinar!</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch((err) => {
+          console.log('SW registration failed:', err);
+        });
+      });
+    }
+  </script>
+</body>
+</html>

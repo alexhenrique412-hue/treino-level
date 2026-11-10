@@ -1,0 +1,7 @@
+# Logs & Temp files
+*.log
+.DS_Store
+Thumbs.db
+
+# Script files for local server (optional)
+make_icons.ps1
