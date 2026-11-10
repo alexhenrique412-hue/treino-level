@@ -337,7 +337,12 @@
       <!-- VIEW B: REGISTRO MANUAL (ESTEIRA / INDOOR) -->
       <div id="runManualView" style="display: none;">
         <div class="card">
-          <div class="card-title">Registrar Corrida de Hoje (Esteira)</div>
+          <div class="card-title">Registrar Corrida de Hoje (Esteira / Indoor)</div>
+          
+          <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 14px; font-size: 0.75rem; color: #fca5a5; line-height: 1.4;">
+            🛡️ <strong>Regra Oficial Anti-Fraude:</strong> Registros manuais de esteira servem para anotação pessoal de quilometragem e <strong>NÃO somam pontos de Nível</strong>. Apenas corridas ao vivo rastreadas pelo nosso <strong>GPS</strong> oficial somam pontos de evolução!
+          </div>
+
           <form id="runForm" onsubmit="handleSaveRun(event)">
             <div class="form-row">
               <div class="form-group">
@@ -356,8 +361,8 @@
               <div>Calorias est.: <strong id="runCalcCalories" style="color: #60a5fa; font-size: 0.85rem;">-</strong></div>
             </div>
 
-            <button type="submit" class="btn btn-primary btn-full">
-              💾 Salvar Corrida Manual & Pontuar (+ horas de treino)
+            <button type="submit" class="btn btn-outline btn-full" style="color: var(--text-main); border-color: rgba(255,255,255,0.2);">
+              💾 Salvar Corrida Manual (Anotação Pessoal • 0 pts)
             </button>
           </form>
         </div>
@@ -365,7 +370,12 @@
 
       <!-- Running History -->
       <div class="card">
-        <div class="card-title">Histórico de Corridas & Rotas</div>
+        <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
+          <span>Histórico de Corridas & Rotas</span>
+          <button type="button" class="btn btn-outline" style="font-size: 0.7rem; padding: 4px 10px; color: #ef4444; border-color: rgba(239,68,68,0.4);" onclick="clearAllRunsHistory()">
+            🗑️ Limpar Tudo
+          </button>
+        </div>
         <div id="runningHistoryList">
           <p style="color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 10px 0;">
             Nenhuma corrida registrada ainda. Amarre os tênis e bora! 👟
@@ -861,6 +871,33 @@
       <div id="routeModalDetails" style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 8px;"></div>
       <div id="routeModalMap"></div>
       <button class="btn btn-primary btn-full" onclick="closeRouteModal()">Fechar Mapa</button>
+    </div>
+  </div>
+
+  <!-- MODAL: ALTERAR TEMPO DA CORRIDA -->
+  <div class="modal-backdrop" id="editRunModal">
+    <div class="modal-box" style="max-width: 400px;">
+      <div class="modal-header">
+        <h3>✏️ Alterar Tempo da Corrida</h3>
+        <button class="btn-icon" onclick="closeEditRunModal()">✕</button>
+      </div>
+      <form id="editRunForm" onsubmit="handleSaveEditRun(event)">
+        <input type="hidden" id="editRunId">
+        <div id="editRunInfo" style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 14px; background: rgba(255,255,255,0.03); padding: 12px; border-radius: var(--radius-sm); line-height: 1.5;">
+          <!-- Informações preenchidas via JS -->
+        </div>
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label style="font-size: 0.85rem; font-weight: 700;">Novo Tempo Total (Minutos)</label>
+          <input type="number" id="editRunNewMinutes" min="1" max="1440" required placeholder="Ex: 30" style="font-size: 1.2rem; font-weight: 800; text-align: center; padding: 10px;">
+        </div>
+        <div id="editRunPointsNote" style="font-size: 0.75rem; line-height: 1.4; margin-bottom: 14px;">
+          <!-- Nota dinâmica de pontuação -->
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn btn-outline" style="flex: 1;" onclick="closeEditRunModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary" style="flex: 1;">💾 Salvar Tempo</button>
+        </div>
+      </form>
     </div>
   </div>
 

@@ -951,6 +951,8 @@ function finishGpsRun() {
     km: finalKm,
     minutes: minutes,
     pace: paceStr,
+    isGps: true,
+    earnedMinutes: minutes,
     route: [...gpsRoutePoints] // Save the route for map viewing!
   };
 
@@ -1096,20 +1098,191 @@ function handleSaveRun(e) {
     km: km,
     minutes: minutes,
     pace: paceStr,
+    isGps: false,
+    earnedMinutes: 0, // Manual runs do NOT give level points (GPS anti-cheat rule)
     route: null
   };
 
   STATE.todayRuns.push(runItem);
   STATE.runningHistory.unshift(runItem);
 
-  // Add the running minutes to training hours (2h = 1pt rule!)
-  addTrainingMinutes(minutes, `Corrida (${km} km)`);
+  // Manual runs do NOT award level points - save state & update UI
+  saveState();
   sfx.playCheck();
 
   document.getElementById("runForm").reset();
   calcRunPace();
-  alert(`Corrida de ${km} km registrada com sucesso! +${minutes} minutos somados às suas horas de treino.`);
+  alert(`📝 Corrida manual de ${km} km salva no histórico!\n\n🛡️ Nota: Registros manuais de esteira não pontuam para o Nível/Ranking. Apenas corridas ao vivo rastreadas pelo GPS oficial somam pontos de evolução.`);
   renderRunningTab();
+}
+
+// --- EDIT & DELETE RUN FUNCTIONS ---
+function openEditRunModal(runId) {
+  triggerHaptic('light');
+  const run = STATE.runningHistory.find(r => r.id === runId);
+  if (!run) return;
+
+  document.getElementById("editRunId").value = runId;
+  document.getElementById("editRunNewMinutes").value = run.minutes;
+
+  const isGps = !!(run.isGps || (run.route && run.route.length > 0));
+  const infoEl = document.getElementById("editRunInfo");
+  infoEl.innerHTML = `
+    <div><strong>🏃 Distância:</strong> ${run.km} km</div>
+    <div><strong>📅 Data:</strong> ${run.date} às ${run.timeStr}</div>
+    <div><strong>⏱️ Tempo Atual:</strong> ${run.minutes} minutos</div>
+    <div style="margin-top: 4px;"><strong>Modalidade:</strong> ${isGps ? '<span style="color: var(--accent-green); font-weight:700;">🛰️ GPS Oficial (Pontua)</span>' : '<span style="color: var(--accent-orange); font-weight:700;">📝 Manual / Esteira (Sem Pontos)</span>'}</div>
+  `;
+
+  const noteEl = document.getElementById("editRunPointsNote");
+  if (isGps) {
+    noteEl.innerHTML = `💡 Como esta corrida é <strong>GPS Oficial</strong>, ao alterar os minutos, sua pontuação de nível e horas totais de treino serão <strong>recalculadas automaticamente</strong> (2 horas = 1 ponto).`;
+    noteEl.style.color = "var(--accent-green)";
+  } else {
+    noteEl.innerHTML = `ℹ️ Esta corrida foi registrada <strong>manualmente</strong>. O tempo e ritmo médio serão atualizados, mas não concedem pontos de nível (regra anti-fraude GPS).`;
+    noteEl.style.color = "var(--text-muted)";
+  }
+
+  document.getElementById("editRunModal").classList.add("open");
+}
+
+function closeEditRunModal() {
+  triggerHaptic('light');
+  const modal = document.getElementById("editRunModal");
+  if (modal) modal.classList.remove("open");
+}
+
+function handleSaveEditRun(e) {
+  e.preventDefault();
+  triggerHaptic('light');
+  const runId = document.getElementById("editRunId").value;
+  const newMinutes = parseInt(document.getElementById("editRunNewMinutes").value, 10);
+
+  if (!newMinutes || newMinutes < 1) {
+    alert("Por favor, digite um tempo válido em minutos (mínimo 1 min).");
+    return;
+  }
+
+  const run = STATE.runningHistory.find(r => r.id === runId);
+  if (!run) return;
+
+  const oldMinutes = run.minutes || 0;
+  const isGps = !!(run.isGps || (run.route && run.route.length > 0));
+
+  run.minutes = newMinutes;
+
+  // Recalculate pace
+  if (run.km > 0) {
+    const paceDecimal = newMinutes / run.km;
+    const paceMin = Math.floor(paceDecimal);
+    const paceSec = Math.round((paceDecimal - paceMin) * 60);
+    run.pace = `${paceMin}'${String(paceSec).padStart(2, '0')}"/km`;
+  }
+
+  // Update in todayRuns if present
+  const todayRun = (STATE.todayRuns || []).find(r => r.id === runId);
+  if (todayRun) {
+    todayRun.minutes = newMinutes;
+    todayRun.pace = run.pace;
+  }
+
+  // Recalculate points if GPS
+  if (isGps) {
+    const diff = newMinutes - oldMinutes;
+    run.isGps = true;
+    run.earnedMinutes = (typeof run.earnedMinutes === 'number' ? run.earnedMinutes : oldMinutes) + diff;
+    STATE.totalMinutes = Math.max(0, (STATE.totalMinutes || 0) + diff);
+    updateLevelAndPoints();
+  }
+
+  saveState();
+  closeEditRunModal();
+  renderRunningTab();
+  triggerHaptic('success');
+  alert(`✓ Tempo da corrida atualizado para ${newMinutes} minutos com sucesso!`);
+}
+
+function deleteRun(runId) {
+  triggerHaptic('light');
+  const index = STATE.runningHistory.findIndex(r => r.id === runId);
+  if (index === -1) return;
+
+  const run = STATE.runningHistory[index];
+  const isGps = !!(run.isGps || (run.route && run.route.length > 0));
+  
+  // Calculate if this run had contributed training minutes to level
+  let earnedMinutes = 0;
+  if (typeof run.earnedMinutes === 'number') {
+    earnedMinutes = run.earnedMinutes;
+  } else if (isGps) {
+    earnedMinutes = run.minutes || 0;
+  } else if (!('isGps' in run)) {
+    // Legacy run prior to anti-cheat rule
+    earnedMinutes = run.minutes || 0;
+  }
+
+  const confirmMsg = earnedMinutes > 0
+    ? `Deseja realmente apagar esta corrida de ${run.km} km (${run.minutes} min)?\n\n⚠️ Esta corrida gerou ${earnedMinutes} minutos de treino. Seus pontos e nível serão recalculados automaticamente.`
+    : `Deseja realmente apagar esta corrida de ${run.km} km (${run.minutes} min) do seu histórico?`;
+
+  if (!confirm(confirmMsg)) return;
+
+  // Deduct points/minutes if it had earned minutes
+  if (earnedMinutes > 0) {
+    STATE.totalMinutes = Math.max(0, (STATE.totalMinutes || 0) - earnedMinutes);
+    // Also remove from todaySessions / workoutHistory if matched
+    STATE.todaySessions = (STATE.todaySessions || []).filter(s => !(s.type && s.type.includes('Corrida') && s.minutes === run.minutes && s.date === run.date));
+    STATE.workoutHistory = (STATE.workoutHistory || []).filter(s => !(s.type && s.type.includes('Corrida') && s.minutes === run.minutes && s.date === run.date));
+    updateLevelAndPoints();
+  }
+
+  // Remove from arrays
+  STATE.runningHistory.splice(index, 1);
+  STATE.todayRuns = (STATE.todayRuns || []).filter(r => r.id !== runId);
+
+  saveState();
+  renderRunningTab();
+  triggerHaptic('success');
+}
+
+function clearAllRunsHistory() {
+  triggerHaptic('light');
+  if (!STATE.runningHistory || STATE.runningHistory.length === 0) {
+    alert("Seu histórico de corridas já está vazio.");
+    return;
+  }
+
+  if (!confirm("⚠️ Atenção: Deseja apagar TODO o seu histórico de corridas?\n\nTodas as corridas serão excluídas e os minutos que pontuaram serão descontados do seu nível.")) {
+    return;
+  }
+
+  // Calculate total minutes to deduct
+  let totalDeduction = 0;
+  STATE.runningHistory.forEach(run => {
+    const isGps = !!(run.isGps || (run.route && run.route.length > 0));
+    if (typeof run.earnedMinutes === 'number') {
+      totalDeduction += run.earnedMinutes;
+    } else if (isGps) {
+      totalDeduction += (run.minutes || 0);
+    } else if (!('isGps' in run)) {
+      totalDeduction += (run.minutes || 0);
+    }
+  });
+
+  if (totalDeduction > 0) {
+    STATE.totalMinutes = Math.max(0, (STATE.totalMinutes || 0) - totalDeduction);
+    STATE.todaySessions = (STATE.todaySessions || []).filter(s => !(s.type && s.type.includes('Corrida')));
+    STATE.workoutHistory = (STATE.workoutHistory || []).filter(s => !(s.type && s.type.includes('Corrida')));
+    updateLevelAndPoints();
+  }
+
+  STATE.runningHistory = [];
+  STATE.todayRuns = [];
+
+  saveState();
+  renderRunningTab();
+  triggerHaptic('success');
+  alert(`✓ Histórico de corridas apagado com sucesso!${totalDeduction > 0 ? ` (-${totalDeduction} min ajustados)` : ''}`);
 }
 
 // --- DAILY CHALLENGE CLAIM ---
@@ -1780,9 +1953,9 @@ function renderWorkoutTab() {
 }
 
 function renderRunningTab() {
-  const todayKm = STATE.todayRuns.reduce((acc, r) => acc + r.km, 0);
-  const todayMins = STATE.todayRuns.reduce((acc, r) => acc + r.minutes, 0);
-  const totalGeneralKm = STATE.runningHistory.reduce((acc, r) => acc + r.km, 0);
+  const todayKm = STATE.todayRuns.reduce((acc, r) => acc + (r.km || 0), 0);
+  const todayMins = STATE.todayRuns.reduce((acc, r) => acc + (r.minutes || 0), 0);
+  const totalGeneralKm = STATE.runningHistory.reduce((acc, r) => acc + (r.km || 0), 0);
 
   document.getElementById("runHeroKmToday").innerText = todayKm.toFixed(1);
   document.getElementById("runHeroTimeToday").innerText = `${todayMins}m`;
@@ -1791,27 +1964,55 @@ function renderRunningTab() {
   const historyEl = document.getElementById("runningHistoryList");
   if (STATE.runningHistory.length === 0) {
     historyEl.innerHTML = `
-      <p style="color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 10px 0;">
+      <p style="color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 14px 0;">
         Nenhuma corrida registrada ainda. Amarre os tênis e bora! 👟
       </p>
     `;
   } else {
-    historyEl.innerHTML = STATE.runningHistory.slice(0, 10).map(r => `
-      <div class="session-item" style="align-items: center;">
-        <div style="flex: 1;">
-          <strong style="color: #fff;">🏃‍♂️ ${r.km} km</strong> em <strong>${r.minutes} min</strong>
-          <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 1px;">
-            Data: ${r.date} às ${r.timeStr} • Ritmo: <span style="color: var(--accent-orange); font-weight:700;">${r.pace}</span>
+    historyEl.innerHTML = STATE.runningHistory.slice(0, 20).map(r => {
+      const isGps = !!(r.isGps || (r.route && r.route.length > 0));
+      const points = isGps ? (r.minutes / 120).toFixed(2) : '0.00';
+      const badgeStyle = isGps 
+        ? 'background: rgba(16,185,129,0.15); color: var(--accent-green); border: 1px solid rgba(16,185,129,0.3); font-weight:700;' 
+        : 'background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid rgba(255,255,255,0.1);';
+      const badgeText = isGps ? `+${points} pt` : `0 pt (Manual)`;
+      const typeTag = isGps 
+        ? `<span style="font-size: 0.65rem; color: var(--accent-green); background: rgba(16,185,129,0.12); padding: 1px 6px; border-radius: 4px; font-weight: 700; margin-left: 6px;">🛰️ GPS</span>`
+        : `<span style="font-size: 0.65rem; color: var(--text-muted); background: rgba(255,255,255,0.06); padding: 1px 6px; border-radius: 4px; margin-left: 6px;">📝 Esteira</span>`;
+
+      return `
+      <div class="session-item" style="display: flex; flex-direction: column; align-items: stretch; gap: 8px; padding: 12px; margin-bottom: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+          <div style="flex: 1;">
+            <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
+              <strong style="color: #fff; font-size: 0.95rem;">🏃‍♂️ ${r.km} km</strong>
+              <span style="color: var(--text-muted); font-size: 0.85rem;">em</span>
+              <strong style="color: var(--accent-green); font-size: 0.95rem;">${r.minutes} min</strong>
+              ${typeTag}
+            </div>
+            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 3px;">
+              Data: ${r.date} às ${r.timeStr} • Ritmo: <span style="color: var(--accent-orange); font-weight: 700;">${r.pace}</span>
+            </div>
           </div>
+          <span class="session-badge" style="${badgeStyle}; white-space: nowrap;">${badgeText}</span>
+        </div>
+
+        <div style="display: flex; gap: 6px; flex-wrap: wrap; align-items: center; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.06);">
           ${(r.route && r.route.length > 0) ? `
-            <button type="button" class="btn btn-outline" style="padding: 3px 8px; font-size: 0.68rem; margin-top: 6px; color: var(--accent-orange); border-color: rgba(245,158,11,0.4); display: inline-flex; align-items: center; gap: 4px;" onclick="openRouteModal('${r.id}')">
-              🗺️ Ver Rota no Mapa
+            <button type="button" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.7rem; color: var(--accent-orange); border-color: rgba(245,158,11,0.4); display: inline-flex; align-items: center; gap: 4px;" onclick="openRouteModal('${r.id}')">
+              🗺️ Ver Rota
             </button>
           ` : ''}
+          <button type="button" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.7rem; color: #60a5fa; border-color: rgba(96,165,250,0.4); display: inline-flex; align-items: center; gap: 4px;" onclick="openEditRunModal('${r.id}')">
+            ✏️ Alterar Tempo
+          </button>
+          <button type="button" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.7rem; color: #ef4444; border-color: rgba(239,68,68,0.4); display: inline-flex; align-items: center; gap: 4px; margin-left: auto;" onclick="deleteRun('${r.id}')">
+            🗑️ Apagar
+          </button>
         </div>
-        <span class="session-badge">+${(r.minutes/120).toFixed(2)} pt</span>
       </div>
-    `).join('');
+      `;
+    }).join('');
   }
 }
 
