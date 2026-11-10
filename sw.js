@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ironlevel-v6';
+const CACHE_NAME = 'ironlevel-v7';
 const ASSETS = [
   './',
   './index.html',
@@ -35,21 +35,27 @@ self.addEventListener('message', (event) => {
   }
 });
 
+// Stale-While-Revalidate: Instant offline speed + automatic background update from network
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
+
+  const url = new URL(e.request.url);
+  // Only cache same-origin assets (skip external CDNs / satellite tiles)
+  if (url.origin !== location.origin) return;
+
   e.respondWith(
     caches.match(e.request).then((cachedResponse) => {
-      if (cachedResponse) return cachedResponse;
-      return fetch(e.request).then((networkResponse) => {
-        if (!networkResponse || networkResponse.status !== 200 || networkResponse.type !== 'basic') {
-          return networkResponse;
+      const fetchPromise = fetch(e.request).then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(e.request, responseToCache);
+          });
         }
-        const responseToCache = networkResponse.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(e.request, responseToCache);
-        });
         return networkResponse;
-      });
-    }).catch(() => caches.match('./index.html'))
+      }).catch(() => null);
+
+      return cachedResponse || fetchPromise || caches.match('./index.html');
+    })
   );
 });

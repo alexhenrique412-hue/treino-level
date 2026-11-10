@@ -1495,37 +1495,92 @@ function checkStandaloneMode() {
   }
 }
 
-// --- FORCE UPDATE & CLEAR CACHE ---
-async function forceUpdateAndClearCache() {
-  triggerHaptic('medium');
-  const confirmMsg = "Deseja buscar a versão mais recente do app e limpar o cache?\n\n✓ Seus treinos, pontos e foto NÃO serão apagados!";
-  if (!confirm(confirmMsg)) return;
+// --- AUTO-UPDATE & OPTIMIZATION ENGINE (Executa automaticamente a cada 2 minutos) ---
+const AUTO_UPDATE_INTERVAL_MS = 2 * 60 * 1000; // 2 minutos (120 segundos)
+let lastAutoOptimizedAt = Date.now();
 
+async function runAutoOptimizationAndCheck() {
   try {
-    // 1. Desregistra service workers antigos
+    // 1. Aciona checagem de nova versão no Service Worker
     if ('serviceWorker' in navigator) {
-      const registrations = await navigator.serviceWorker.getRegistrations();
-      for (const reg of registrations) {
-        if (reg.active) {
-          reg.active.postMessage({ action: 'skipWaiting' });
-        }
-        await reg.unregister();
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg) {
+        await reg.update();
       }
     }
 
-    // 2. Apaga todos os caches armazenados no navegador
+    // 2. Verifica se uma versão mais recente foi enviada para o GitHub
+    const checkRes = await fetch('./sw.js?check=' + Date.now(), { cache: 'no-store' });
+    if (checkRes.ok) {
+      const swCode = await checkRes.text();
+      const match = swCode.match(/CACHE_NAME\s*=\s*['"]([^'"]+)['"]/);
+      if (match && match[1]) {
+        const remoteVersion = match[1];
+        const localVersion = localStorage.getItem('ironlevel_cache_ver') || 'ironlevel-v6';
+
+        if (remoteVersion !== localVersion) {
+          console.log(`[Auto-Update] Nova versão detectada (${remoteVersion}). Atualizando em segundo plano...`);
+          localStorage.setItem('ironlevel_cache_ver', remoteVersion);
+
+          // Limpa caches obsoletos para liberar memória e manter o celular otimizado
+          if ('caches' in window) {
+            const keys = await caches.keys();
+            await Promise.all(keys.filter(k => k !== remoteVersion).map(k => caches.delete(k)));
+          }
+
+          // Só recarrega se o usuário NÃO estiver cronometrando treino ou gravando GPS
+          const isGpsActive = (typeof isGpsTracking !== 'undefined') && isGpsTracking;
+          const isStopwatchActive = (typeof stopwatchInterval !== 'undefined') && (stopwatchInterval !== null);
+
+          if (!isGpsActive && !isStopwatchActive) {
+            console.log('[Auto-Update] Aplicando versão atualizada automaticamente...');
+            const cleanUrl = window.location.href.split('#')[0].split('?')[0];
+            window.location.replace(cleanUrl + '?v=' + Date.now());
+            return;
+          }
+        }
+      }
+    }
+
+    // 3. Otimização de memória e estado (salva integridade e limpa lixo)
+    if (typeof saveState === 'function') {
+      saveState();
+    }
+    lastAutoOptimizedAt = Date.now();
+    console.log('[IronLevel] Otimização periódica de 2 minutos concluída com sucesso.');
+  } catch (err) {
+    // Falha silenciosa caso o aparelho esteja temporariamente offline
+    console.log('[Auto-Update] Verificação em background silenciosa:', err);
+  }
+}
+
+function startAutoUpdateEngine() {
+  // Primeira checagem após 10 segundos da inicialização
+  setTimeout(runAutoOptimizationAndCheck, 10000);
+  // Checagem contínua estritamente a cada 2 minutos
+  setInterval(runAutoOptimizationAndCheck, AUTO_UPDATE_INTERVAL_MS);
+
+  // Também otimiza sempre que o usuário desbloquear o celular ou voltar para a aba
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      const elapsed = Date.now() - lastAutoOptimizedAt;
+      if (elapsed >= AUTO_UPDATE_INTERVAL_MS) {
+        runAutoOptimizationAndCheck();
+      }
+    }
+  });
+}
+
+async function forceUpdateAndClearCache() {
+  try {
     if ('caches' in window) {
       const cacheNames = await caches.keys();
       await Promise.all(cacheNames.map(name => caches.delete(name)));
     }
-
-    // 3. Recarrega a página forçando a busca dos arquivos mais novos do GitHub
-    alert("Cache limpo com sucesso! O app será recarregado agora com a versão mais recente.");
     const baseUrl = window.location.href.split('#')[0].split('?')[0];
     window.location.replace(baseUrl + '?t=' + Date.now());
   } catch (err) {
-    console.error("Erro ao limpar cache:", err);
-    window.location.reload(true);
+    window.location.reload();
   }
 }
 
@@ -2567,4 +2622,5 @@ window.addEventListener("DOMContentLoaded", () => {
   checkStandaloneMode();
   STATE.activeDayIndex = getCurrentDayOfWeekIndex();
   renderAll();
+  startAutoUpdateEngine();
 });
