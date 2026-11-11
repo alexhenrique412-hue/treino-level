@@ -1320,14 +1320,223 @@ function editWorkoutTitle() {
   }
 }
 
+// --- EXERCISE CATALOG FOR BEGINNERS & QUICK SELECTOR ---
+const EXERCISE_CATALOG = [
+  // PEITO
+  { muscle: "peito", name: "Supino Reto com Barra", sets: 4, reps: "8-10", rest: 60, notes: "Desça a barra no meio do peito com controle, sem bater." },
+  { muscle: "peito", name: "Supino Inclinado com Halteres", sets: 4, reps: "10-12", rest: 60, notes: "Banco em 30-45 graus. Foco na porção superior do peitoral." },
+  { muscle: "peito", name: "Supino Reto com Halteres", sets: 4, reps: "10-12", rest: 60, notes: "Maior amplitude de movimento e estabilidade para os ombros." },
+  { muscle: "peito", name: "Crucifixo na Polia (Crossover)", sets: 3, reps: "12-15", rest: 45, notes: "Aperte 1 segundo no pico de contração no centro." },
+  { muscle: "peito", name: "Voador / Peck Deck Máquina", sets: 3, reps: "12-15", rest: 45, notes: "Excelente para novatos aprenderem o isolamento do peitoral." },
+  { muscle: "peito", name: "Supino Máquina Articulada", sets: 4, reps: "10-12", rest: 60, notes: "Muito seguro para iniciantes aumentarem a carga com firmeza." },
+  { muscle: "peito", name: "Flexão de Braço (Solo)", sets: 3, reps: "10-15", rest: 60, notes: "Corpo em linha reta e abdômen contraído o tempo todo." },
+
+  // COSTAS
+  { muscle: "costas", name: "Puxada Frontal Alta na Polia", sets: 4, reps: "8-10", rest: 60, notes: "Puxe a barra até a altura do queixo, estufando o peito." },
+  { muscle: "costas", name: "Remada Baixa no Triângulo", sets: 4, reps: "10-12", rest: 60, notes: "Coluna ereta, puxe o triângulo no abdômen sem curvar as costas." },
+  { muscle: "costas", name: "Remada Curvada com Barra", sets: 3, reps: "8-10", rest: 90, notes: "Tronco inclinado a 45 graus, puxe a barra rente às pernas." },
+  { muscle: "costas", name: "Pulldown na Polia (Corda/Barra)", sets: 3, reps: "12-15", rest: 45, notes: "Braços estendidos, ative as costas (dorsais) sem dobrar cotovelos." },
+  { muscle: "costas", name: "Remada Unilateral com Halter (Serrote)", sets: 3, reps: "10-12", rest: 45, notes: "Apoie o joelho no banco e puxe o halter rente ao quadril." },
+  { muscle: "costas", name: "Remada Máquina Articulada", sets: 4, reps: "10-12", rest: 60, notes: "Apoio no peito para proteger a lombar do iniciante." },
+  { muscle: "costas", name: "Barra Fixa (Graviton ou Livre)", sets: 3, reps: "6-10", rest: 90, notes: "Exercício rei para abrir as costas e ganhar força." },
+
+  // PERNAS (QUADRÍCEPS)
+  { muscle: "pernas", name: "Agachamento Livre com Barra", sets: 4, reps: "8-10", rest: 90, notes: "Pés na largura dos ombros, desça até 90 graus ou mais." },
+  { muscle: "pernas", name: "Leg Press 45°", sets: 4, reps: "10-12", rest: 90, notes: "Não trave os joelhos no topo, desça bem controlando o peso." },
+  { muscle: "pernas", name: "Cadeira Extensora", sets: 4, reps: "12-15", rest: 45, notes: "Segure 1 segundo no topo contraindo a coxa fortemente." },
+  { muscle: "pernas", name: "Agachamento no Hack Machine", sets: 4, reps: "10-12", rest: 90, notes: "Encosto apoiado, excelente e seguro para as pernas do novato." },
+  { muscle: "pernas", name: "Agachamento Búlgaro com Halteres", sets: 3, reps: "10-12", rest: 60, notes: "Pé de trás apoiado no banco, foco total na perna da frente." },
+  { muscle: "pernas", name: "Afundo / Passada com Halteres", sets: 3, reps: "12 passos", rest: 60, notes: "Passo firme mantendo o tronco ereto e equilibrado." },
+  { muscle: "pernas", name: "Agachamento Goblet com Halter", sets: 3, reps: "12-15", rest: 60, notes: "Segure o halter junto ao peito, perfeito para aprender a agachar." },
+
+  // POSTERIOR & GLÚTEOS
+  { muscle: "posterior", name: "Mesa Flexora", sets: 4, reps: "10-12", rest: 60, notes: "Puxe os calcanhares no glúteo sem tirar o quadril do banco." },
+  { muscle: "posterior", name: "Cadeira Flexora", sets: 4, reps: "12-15", rest: 45, notes: "Ajuste o rolo nos tornozelos e flexione as pernas para baixo." },
+  { muscle: "posterior", name: "Stiff com Barra ou Halteres", sets: 4, reps: "10-12", rest: 60, notes: "Coluna reta e joelhos semi-flexionados, sinta o posterior alongar." },
+  { muscle: "posterior", name: "Elevação Pélvica com Barra/Halter", sets: 4, reps: "10-12", rest: 60, notes: "Apoie as costas no banco e aperte o glúteo 2s no topo." },
+  { muscle: "posterior", name: "Cadeira Abdutora", sets: 3, reps: "15-20", rest: 45, notes: "Abra as pernas controlando o movimento, foco no glúteo médio." },
+  { muscle: "posterior", name: "Cadeira Adutora", sets: 3, reps: "15-20", rest: 45, notes: "Feche as pernas com força, foco na parte interna da coxa." },
+
+  // OMBROS
+  { muscle: "ombros", name: "Desenvolvimento com Halteres", sets: 4, reps: "8-10", rest: 60, notes: "Suba os halteres em arco sem bater em cima, desça a 90 graus." },
+  { muscle: "ombros", name: "Elevação Lateral com Halteres", sets: 4, reps: "12-15", rest: 45, notes: "Cotovelos levemente dobrados, erga até a linha do ombro." },
+  { muscle: "ombros", name: "Elevação Lateral na Polia", sets: 3, reps: "12-15", rest: 45, notes: "Tensão constante desde o início do movimento." },
+  { muscle: "ombros", name: "Crucifixo Invertido na Máquina", sets: 3, reps: "12-15", rest: 45, notes: "Foco no deltoide posterior para desenhar a parte de trás do ombro." },
+  { muscle: "ombros", name: "Elevação Frontal com Halteres", sets: 3, reps: "12", rest: 45, notes: "Erga os braços alternados até a altura dos olhos." },
+  { muscle: "ombros", name: "Face Pull na Polia com Corda", sets: 3, reps: "15", rest: 45, notes: "Puxe a corda em direção ao rosto com cotovelos bem altos." },
+
+  // BÍCEPS & ANTEBRAÇO
+  { muscle: "biceps", name: "Rosca Direta com Barra W", sets: 4, reps: "10-12", rest: 60, notes: "Cotovelos colados ao tronco, suba sem balançar a lombar." },
+  { muscle: "biceps", name: "Rosca Martelo com Halteres", sets: 3, reps: "10-12", rest: 45, notes: "Pegada neutra (palmas voltadas para dentro), engrossa o braço." },
+  { muscle: "biceps", name: "Rosca Scott na Máquina", sets: 3, reps: "10-12", rest: 60, notes: "Isolamento total do bíceps com apoio seguro nos braços." },
+  { muscle: "biceps", name: "Rosca no Banco Inclinado 45°", sets: 3, reps: "10-12", rest: 60, notes: "Alongamento máximo do bíceps, excelente para o pico muscular." },
+  { muscle: "biceps", name: "Rosca Concentrada com Halter", sets: 3, reps: "12", rest: 45, notes: "Cotovelo apoiado na parte interna da coxa, foco e contração." },
+  { muscle: "biceps", name: "Rosca na Polia Baixa", sets: 3, reps: "12-15", rest: 45, notes: "Cabo puxando constantemente, sem ponto de descanso." },
+  { muscle: "biceps", name: "Flexão de Punho para Antebraço", sets: 3, reps: "15-20", rest: 40, notes: "Apoie os antebraços no banco e flexione os punhos para cima." },
+
+  // TRÍCEPS
+  { muscle: "triceps", name: "Tríceps Corda na Polia", sets: 4, reps: "12-15", rest: 45, notes: "Abra a corda para fora no final do movimento para contrair tudo." },
+  { muscle: "triceps", name: "Tríceps Pulley Barra Reta / V", sets: 4, reps: "10-12", rest: 45, notes: "Cotovelos travados ao lado do corpo, empurre até estender." },
+  { muscle: "triceps", name: "Tríceps Francês com Halter", sets: 3, reps: "10-12", rest: 60, notes: "Segure o halter atrás da cabeça mantendo cotovelos fechados." },
+  { muscle: "triceps", name: "Tríceps Testa com Barra W", sets: 3, reps: "10-12", rest: 60, notes: "Deitado no banco, desça a barra controlando até a testa." },
+  { muscle: "triceps", name: "Mergulho no Banco (Paralelas)", sets: 3, reps: "12-15", rest: 60, notes: "Mãos apoiadas no banco, desça o corpo rente e empurre com os braços." },
+
+  // PANTURRILHA
+  { muscle: "panturrilha", name: "Panturrilha em Pé na Máquina / Smith", sets: 4, reps: "15-20", rest: 45, notes: "Alongue bem o calcanhar na descida e suba na ponta máxima dos pés." },
+  { muscle: "panturrilha", name: "Panturrilha Sentado (Gêmeos)", sets: 4, reps: "15-20", rest: 45, notes: "Foco no músculo sóleo, faça o movimento completo e cadenciado." },
+  { muscle: "panturrilha", name: "Panturrilha no Leg Press", sets: 4, reps: "15-20", rest: 45, notes: "Apoie só as pontas dos pés na base inferior e empurre com os tornozelos." },
+
+  // TRAPÉZIO
+  { muscle: "trapezio", name: "Encolhimento com Halteres", sets: 4, reps: "12-15", rest: 45, notes: "Erga os ombros em direção às orelhas, segure 1 segundo no topo." },
+  { muscle: "trapezio", name: "Encolhimento com Barra", sets: 4, reps: "12-15", rest: 45, notes: "Movimento puramente vertical para cima, sem girar os ombros." },
+
+  // ABDÔMEN & CORE
+  { muscle: "abdomen", name: "Abdominal Supra no Solo", sets: 4, reps: "15-20", rest: 45, notes: "Solte todo o ar ao subir e aperte a musculatura abdominal." },
+  { muscle: "abdomen", name: "Prancha Abdominal", sets: 3, reps: "45-60 seg", rest: 45, notes: "Corpo reto como uma tábua, sem deixar o quadril cair." },
+  { muscle: "abdomen", name: "Elevação de Pernas na Barra Fixa", sets: 3, reps: "12-15", rest: 45, notes: "Suba os joelhos ou pernas até 90 graus sem balanço." },
+  { muscle: "abdomen", name: "Abdominal Infra no Banco", sets: 3, reps: "15-20", rest: 45, notes: "Tire o quadril levemente do banco no final da subida." },
+  { muscle: "abdomen", name: "Abdominal na Roda (Ab Wheel)", sets: 3, reps: "8-12", rest: 60, notes: "Role para frente com abdômen travado e retorne com força." }
+];
+
+// --- MODELOS DE PLANILHAS PRONTAS DE TREINO ---
+const WORKOUT_TEMPLATES = {
+  daily_recommended: () => {
+    const currentDay = STATE.activeDayIndex;
+    const def = DEFAULT_WORKOUT_ROUTINES[currentDay];
+    return {
+      title: def.title,
+      exercises: def.exercises.map(e => ({ ...e, id: "ex_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4), done: false }))
+    };
+  },
+  beginner_adaptation: () => ({
+    title: "Adaptação Iniciante / Novato Total",
+    exercises: [
+      { id: "b1", name: "Leg Press 45°", sets: 3, reps: "12-15", weight: 40, rest: 60, notes: "Movimento controlado, pés firmes", done: false },
+      { id: "b2", name: "Puxada Frontal Alta na Polia", sets: 3, reps: "10-12", weight: 25, rest: 60, notes: "Puxe até o peito, costas retas", done: false },
+      { id: "b3", name: "Supino Máquina Articulada", sets: 3, reps: "10-12", weight: 20, rest: 60, notes: "Máquina guiada segura para novato", done: false },
+      { id: "b4", name: "Cadeira Extensora", sets: 3, reps: "12-15", weight: 20, rest: 45, notes: "Segure 1s em cima", done: false },
+      { id: "b5", name: "Abdominal Supra no Solo", sets: 3, reps: "15-20", weight: 0, rest: 45, notes: "Solte o ar na subida", done: false }
+    ]
+  }),
+  push_day: () => ({
+    title: "Ficha A: Peito, Tríceps & Ombros (Push)",
+    exercises: [
+      { id: "p1", name: "Supino Reto com Barra", sets: 4, reps: "8-10", weight: 30, rest: 60, notes: "Desça no meio do peitoral", done: false },
+      { id: "p2", name: "Supino Inclinado com Halteres", sets: 4, reps: "10-12", weight: 14, rest: 60, notes: "Foco no peitoral superior", done: false },
+      { id: "p3", name: "Crucifixo na Polia (Crossover)", sets: 3, reps: "12-15", weight: 15, rest: 45, notes: "Aperte 1s no meio", done: false },
+      { id: "p4", name: "Desenvolvimento com Halteres", sets: 4, reps: "10-12", weight: 12, rest: 60, notes: "Ombros a 90 graus", done: false },
+      { id: "p5", name: "Elevação Lateral com Halteres", sets: 4, reps: "12-15", weight: 6, rest: 45, notes: "Sem usar impulso", done: false },
+      { id: "p6", name: "Tríceps Corda na Polia", sets: 4, reps: "12-15", weight: 20, rest: 45, notes: "Abra a corda no final", done: false }
+    ]
+  }),
+  pull_day: () => ({
+    title: "Ficha B: Costas, Bíceps & Abdômen (Pull)",
+    exercises: [
+      { id: "pl1", name: "Puxada Frontal Alta na Polia", sets: 4, reps: "8-10", weight: 35, rest: 60, notes: "Puxe até o queixo/peito", done: false },
+      { id: "pl2", name: "Remada Baixa no Triângulo", sets: 4, reps: "10-12", weight: 30, rest: 60, notes: "Coluna ereta e peito aberto", done: false },
+      { id: "pl3", name: "Remada Curvada com Barra", sets: 3, reps: "8-10", weight: 25, rest: 90, notes: "Tronco inclinado a 45°", done: false },
+      { id: "pl4", name: "Rosca Direta com Barra W", sets: 4, reps: "10-12", weight: 16, rest: 60, notes: "Cotovelos colados ao corpo", done: false },
+      { id: "pl5", name: "Rosca Martelo com Halteres", sets: 3, reps: "10-12", weight: 10, rest: 45, notes: "Foco no braquial e antebraço", done: false },
+      { id: "pl6", name: "Prancha Abdominal", sets: 3, reps: "45 seg", weight: 0, rest: 45, notes: "Corpo reto e travado", done: false }
+    ]
+  }),
+  legs_day: () => ({
+    title: "Ficha C: Pernas Completo & Panturrilhas (Legs)",
+    exercises: [
+      { id: "l1", name: "Agachamento Livre com Barra", sets: 4, reps: "8-10", weight: 40, rest: 90, notes: "Desça até 90 graus", done: false },
+      { id: "l2", name: "Leg Press 45°", sets: 4, reps: "10-12", weight: 100, rest: 90, notes: "Amplitude completa sem travar joelho", done: false },
+      { id: "l3", name: "Cadeira Extensora", sets: 4, reps: "12-15", weight: 30, rest: 45, notes: "Segura 1s em cima", done: false },
+      { id: "l4", name: "Mesa Flexora", sets: 4, reps: "10-12", weight: 25, rest: 60, notes: "Posterior de coxa", done: false },
+      { id: "l5", name: "Panturrilha em Pé na Máquina", sets: 4, reps: "15-20", weight: 35, rest: 45, notes: "Alongue e suba no máximo", done: false }
+    ]
+  }),
+  glutes_focus: () => ({
+    title: "Ficha D: Glúteos & Posterior (Foco Inferiores)",
+    exercises: [
+      { id: "g1", name: "Elevação Pélvica com Barra/Halter", sets: 4, reps: "10-12", weight: 30, rest: 60, notes: "Contraia o glúteo 2s no topo", done: false },
+      { id: "g2", name: "Agachamento Búlgaro", sets: 3, reps: "10-12", weight: 10, rest: 60, notes: "Foco na perna da frente", done: false },
+      { id: "g3", name: "Stiff com Barra ou Halteres", sets: 4, reps: "10-12", weight: 20, rest: 60, notes: "Coluna reta, sinta posterior", done: false },
+      { id: "g4", name: "Cadeira Flexora", sets: 4, reps: "12-15", weight: 25, rest: 45, notes: "Descida controlada", done: false },
+      { id: "g5", name: "Cadeira Abdutora", sets: 3, reps: "15-20", weight: 30, rest: 45, notes: "Glúteo médio, segure 1s aberta", done: false }
+    ]
+  })
+};
+
+function populateExerciseCatalogSelect(muscleFilter = "all") {
+  const select = document.getElementById("exerciseCatalogSelect");
+  const datalist = document.getElementById("exerciseDatalist");
+  const chipsContainer = document.getElementById("exerciseQuickChips");
+  if (!select) return;
+
+  const filtered = (muscleFilter === "all")
+    ? EXERCISE_CATALOG
+    : EXERCISE_CATALOG.filter(ex => ex.muscle === muscleFilter);
+
+  // 1. Preenche dropdown
+  select.innerHTML = '<option value="">👇 Toque para escolher da lista...</option>' + 
+    filtered.map(ex => `<option value="${ex.name}">${ex.name} (${ex.sets}x ${ex.reps})</option>`).join('');
+
+  // 2. Preenche Datalist de sugestões
+  if (datalist) {
+    datalist.innerHTML = EXERCISE_CATALOG.map(ex => `<option value="${ex.name}">`).join('');
+  }
+
+  // 3. Preenche Chips rápidos de clique direto
+  if (chipsContainer) {
+    const chipsToShow = filtered.slice(0, 6);
+    chipsContainer.innerHTML = chipsToShow.map(ex => `
+      <button type="button" class="quick-chip-btn" onclick="selectCatalogExercise('${ex.name.replace(/'/g, "\\'")}')">
+        + ${ex.name.split(' ')[0]} ${ex.name.split(' ')[1] || ''}
+      </button>
+    `).join('');
+  }
+}
+
+function filterExercisesByMuscle(muscleGroup) {
+  triggerHaptic('light');
+  populateExerciseCatalogSelect(muscleGroup);
+}
+
+function selectCatalogExercise(exName) {
+  if (!exName) return;
+  triggerHaptic('light');
+  const ex = EXERCISE_CATALOG.find(item => item.name === exName);
+  if (!ex) return;
+
+  document.getElementById("exerciseNameInput").value = ex.name;
+  document.getElementById("exerciseSetsInput").value = ex.sets;
+  document.getElementById("exerciseRepsInput").value = ex.reps;
+  document.getElementById("exerciseRestInput").value = ex.rest;
+  document.getElementById("exerciseNotesInput").value = ex.notes;
+
+  const tipBox = document.getElementById("exerciseExecutionTipBox");
+  if (tipBox) {
+    tipBox.style.display = "block";
+    tipBox.innerHTML = `💡 <strong>Dica de Execução para Novatos:</strong> ${ex.notes}`;
+  }
+}
+
 function openAddExerciseModal() {
+  triggerHaptic('light');
   document.getElementById("exerciseModalTitle").innerText = "Adicionar Exercício";
   document.getElementById("exerciseId").value = "";
   document.getElementById("exerciseForm").reset();
+
+  const muscleFilter = document.getElementById("exerciseMuscleFilter");
+  if (muscleFilter) muscleFilter.value = "all";
+  populateExerciseCatalogSelect("all");
+
+  const tipBox = document.getElementById("exerciseExecutionTipBox");
+  if (tipBox) {
+    tipBox.style.display = "none";
+    tipBox.innerText = "";
+  }
+
   document.getElementById("exerciseModal").classList.add("open");
 }
 
 function openEditExerciseModal(exId) {
+  triggerHaptic('light');
   const dayRoutine = STATE.routines[STATE.activeDayIndex];
   const ex = dayRoutine.exercises.find(e => e.id === exId);
   if (!ex) return;
@@ -1340,11 +1549,79 @@ function openEditExerciseModal(exId) {
   document.getElementById("exerciseWeightInput").value = ex.weight || 0;
   document.getElementById("exerciseRestInput").value = ex.rest || 60;
   document.getElementById("exerciseNotesInput").value = ex.notes || "";
+
+  populateExerciseCatalogSelect("all");
+
+  const tipBox = document.getElementById("exerciseExecutionTipBox");
+  if (tipBox) {
+    if (ex.notes) {
+      tipBox.style.display = "block";
+      tipBox.innerHTML = `💡 <strong>Dica / Observação:</strong> ${ex.notes}`;
+    } else {
+      tipBox.style.display = "none";
+    }
+  }
+
   document.getElementById("exerciseModal").classList.add("open");
 }
 
 function closeExerciseModal() {
+  triggerHaptic('light');
   document.getElementById("exerciseModal").classList.remove("open");
+}
+
+function openWorkoutTemplatesModal() {
+  triggerHaptic('light');
+  const currentDay = STATE.activeDayIndex;
+  const routine = STATE.routines[currentDay];
+  
+  const dailyTitleEl = document.getElementById("templateDailyTitle");
+  const dailyDescEl = document.getElementById("templateDailyDesc");
+  if (dailyTitleEl) {
+    dailyTitleEl.innerText = `⚡ Treino Oficial de Hoje (${routine.dayName}: ${routine.title})`;
+  }
+  if (dailyDescEl) {
+    dailyDescEl.innerText = `Carrega a ficha oficial balanceada de ${routine.title} com 5 a 6 exercícios e cargas sugeridas.`;
+  }
+
+  document.getElementById("workoutTemplatesModal").classList.add("open");
+}
+
+function closeWorkoutTemplatesModal() {
+  triggerHaptic('light');
+  document.getElementById("workoutTemplatesModal").classList.remove("open");
+}
+
+function loadWorkoutTemplate(templateType) {
+  triggerHaptic('success');
+  const currentDay = STATE.activeDayIndex;
+  const routine = STATE.routines[currentDay];
+
+  if (templateType === 'clear') {
+    if (!confirm(`Deseja realmente limpar todos os exercícios de ${routine.dayName}?`)) return;
+    routine.exercises = [];
+    saveState();
+    closeWorkoutTemplatesModal();
+    renderWorkoutTab();
+    return;
+  }
+
+  const templateFn = WORKOUT_TEMPLATES[templateType];
+  if (!templateFn) return;
+
+  const result = templateFn();
+  if (!confirm(`Deseja carregar a planilha "${result.title}" para ${routine.dayName}?\n\n(A ficha deste dia será preenchida com os exercícios recomendados).`)) {
+    return;
+  }
+
+  routine.title = result.title;
+  routine.exercises = result.exercises;
+
+  saveState();
+  closeWorkoutTemplatesModal();
+  renderWorkoutTab();
+  sfx.playLevelUp();
+  alert(`✓ Planilha "${result.title}" montada com sucesso para ${routine.dayName}! Bora treinar! 💪`);
 }
 
 function handleSaveExercise(e) {

@@ -214,11 +214,16 @@
       </div>
 
       <!-- Exercise List Header & Add Button -->
-      <div class="card-title">
+      <div class="card-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
         <span>Exercícios do Dia (<span id="exerciseCountBadge">0</span>)</span>
-        <button class="btn btn-primary" style="padding: 6px 12px; font-size: 0.75rem;" onclick="openAddExerciseModal()">
-          + Adicionar Exercício
-        </button>
+        <div style="display: flex; gap: 6px;">
+          <button type="button" class="btn btn-outline" style="padding: 6px 10px; font-size: 0.72rem; color: #38bdf8; border-color: rgba(56,189,248,0.4); display: flex; align-items: center; gap: 4px;" onclick="openWorkoutTemplatesModal()" title="Escolher ficha pronta para o dia">
+            📋 Planilhas Prontas
+          </button>
+          <button type="button" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.75rem;" onclick="openAddExerciseModal()">
+            + Exercício
+          </button>
+        </div>
       </div>
 
       <!-- Exercise List Container -->
@@ -525,12 +530,57 @@
         <h3 id="exerciseModalTitle">Adicionar Exercício</h3>
         <button class="btn-icon" onclick="closeExerciseModal()">✕</button>
       </div>
+
+      <!-- SELETOR DE EXERCÍCIOS PARA NOVATOS -->
+      <div style="background: rgba(0, 210, 255, 0.08); border: 1px solid rgba(0, 210, 255, 0.28); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <label style="font-size: 0.78rem; font-weight: 700; color: #00d2ff; margin-bottom: 0;">
+            💡 Escolha da Lista de Exercícios (Novatos):
+          </label>
+        </div>
+        <div style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 8px;">
+          Toque em qualquer exercício para preencher automaticamente as séries, repetições e dicas ideais!
+        </div>
+
+        <div class="form-row" style="margin-bottom: 6px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <select id="exerciseMuscleFilter" onchange="filterExercisesByMuscle(this.value)" style="font-size: 0.8rem; padding: 8px 10px;">
+              <option value="all">⚡ Todos os Músculos</option>
+              <option value="peito">🦾 Peito</option>
+              <option value="costas">🦅 Costas</option>
+              <option value="pernas">🦵 Pernas (Quadríceps)</option>
+              <option value="posterior">🍑 Posterior & Glúteos</option>
+              <option value="ombros">⚡ Ombros</option>
+              <option value="biceps">💪 Bíceps & Antebraço</option>
+              <option value="triceps">🥊 Tríceps</option>
+              <option value="panturrilha">👟 Panturrilha</option>
+              <option value="trapezio">🔺 Trapézio</option>
+              <option value="abdomen">🛡️ Abdômen & Core</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <select id="exerciseCatalogSelect" onchange="selectCatalogExercise(this.value)" style="font-size: 0.8rem; padding: 8px 10px;">
+              <option value="">👇 Selecione um exercício...</option>
+              <!-- Preenchido via JS -->
+            </select>
+          </div>
+        </div>
+
+        <!-- Chips de Atalhos Rápidos -->
+        <div id="exerciseQuickChips" style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px;">
+          <!-- Preenchido via JS com os mais populares do músculo selecionado -->
+        </div>
+      </div>
+
       <form id="exerciseForm" onsubmit="handleSaveExercise(event)">
         <input type="hidden" id="exerciseId">
+        
         <div class="form-group">
           <label>Nome do Exercício</label>
-          <input type="text" id="exerciseNameInput" placeholder="Ex: Supino Reto com Barra" required>
+          <input type="text" id="exerciseNameInput" list="exerciseDatalist" placeholder="Ex: Supino Reto com Barra" required>
+          <datalist id="exerciseDatalist"></datalist>
         </div>
+
         <div class="form-row">
           <div class="form-group">
             <label>Séries</label>
@@ -541,6 +591,7 @@
             <input type="text" id="exerciseRepsInput" placeholder="Ex: 10 a 12" value="10-12" required>
           </div>
         </div>
+
         <div class="form-row">
           <div class="form-group">
             <label>Carga (kg)</label>
@@ -549,6 +600,7 @@
           <div class="form-group">
             <label>Descanso sugerido</label>
             <select id="exerciseRestInput">
+              <option value="30">30 segundos</option>
               <option value="45">45 segundos</option>
               <option value="60" selected>60 segundos</option>
               <option value="90">90 segundos</option>
@@ -556,12 +608,117 @@
             </select>
           </div>
         </div>
+
         <div class="form-group">
-          <label>Observação / Dica</label>
+          <label>Observação / Dica de Execução</label>
           <input type="text" id="exerciseNotesInput" placeholder="Ex: Cadência controlada 3s descida">
         </div>
-        <button type="submit" class="btn btn-primary btn-full">Salvar Exercício</button>
+
+        <!-- Box de Instrução/Dica para o Novato -->
+        <div id="exerciseExecutionTipBox" style="display: none; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-sm); padding: 8px 10px; margin-bottom: 12px; font-size: 0.72rem; color: #a7f3d0; line-height: 1.4;">
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full">💾 Salvar Exercício</button>
       </form>
+    </div>
+  </div>
+
+  <!-- MODAL: MODELOS DE PLANILHAS PRONTAS DO DIA (PARA NOVATOS) -->
+  <div class="modal-backdrop" id="workoutTemplatesModal">
+    <div class="modal-box" style="max-width: 440px;">
+      <div class="modal-header">
+        <h3>📋 Planilhas de Treino do Dia</h3>
+        <button class="btn-icon" onclick="closeWorkoutTemplatesModal()">✕</button>
+      </div>
+
+      <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px; line-height: 1.4;">
+        Não sabe como montar sua ficha? Escolha um dos modelos prontos abaixo para preencher o seu dia com os exercícios e séries recomendados:
+      </p>
+
+      <div style="display: flex; flex-direction: column; gap: 10px; max-height: 60vh; overflow-y: auto; padding-right: 4px;">
+        
+        <!-- Opção 1: Ficha Recomendada do Dia da Semana -->
+        <div class="template-plan-card" onclick="loadWorkoutTemplate('daily_recommended')">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <strong style="color: #00d2ff; font-size: 0.9rem;" id="templateDailyTitle">⚡ Treino de Hoje (Oficial)</strong>
+            <span style="font-size: 0.68rem; background: rgba(0,210,255,0.15); color: #00d2ff; padding: 2px 6px; border-radius: 4px; font-weight: 700;">Recomendado</span>
+          </div>
+          <p style="font-size: 0.72rem; color: var(--text-muted); margin: 0;" id="templateDailyDesc">
+            Carrega os exercícios oficiais da ficha do dia da semana atual com séries e cargas balanceadas.
+          </p>
+        </div>
+
+        <!-- Opção 2: Iniciante / Adaptação Geral -->
+        <div class="template-plan-card" onclick="loadWorkoutTemplate('beginner_adaptation')">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <strong style="color: #10b981; font-size: 0.9rem;">🔰 Treino Iniciante / Novato Total</strong>
+            <span style="font-size: 0.68rem; background: rgba(16,185,129,0.15); color: #10b981; padding: 2px 6px; border-radius: 4px; font-weight: 700;">Fácil</span>
+          </div>
+          <p style="font-size: 0.72rem; color: var(--text-muted); margin: 0;">
+            Máquinas guiadas seguras: Leg Press, Puxada Alta, Supino Máquina, Cadeira Extensora e Abdominal.
+          </p>
+        </div>
+
+        <!-- Opção 3: Ficha A (Peito, Tríceps & Ombros - Push) -->
+        <div class="template-plan-card" onclick="loadWorkoutTemplate('push_day')">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <strong style="color: #f97316; font-size: 0.9rem;">🦾 Ficha A: Peito, Tríceps & Ombros</strong>
+            <span style="font-size: 0.68rem; background: rgba(249,115,22,0.15); color: #f97316; padding: 2px 6px; border-radius: 4px; font-weight: 700;">Push</span>
+          </div>
+          <p style="font-size: 0.72rem; color: var(--text-muted); margin: 0;">
+            Supino Reto, Supino Inclinado, Crossover, Desenvolvimento com Halteres e Tríceps Corda.
+          </p>
+        </div>
+
+        <!-- Opção 4: Ficha B (Costas, Bíceps & Abdômen - Pull) -->
+        <div class="template-plan-card" onclick="loadWorkoutTemplate('pull_day')">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <strong style="color: #3b82f6; font-size: 0.9rem;">🦅 Ficha B: Costas, Bíceps & Abdômen</strong>
+            <span style="font-size: 0.68rem; background: rgba(59,130,246,0.15); color: #3b82f6; padding: 2px 6px; border-radius: 4px; font-weight: 700;">Pull</span>
+          </div>
+          <p style="font-size: 0.72rem; color: var(--text-muted); margin: 0;">
+            Puxada Frontal, Remada Baixa, Remada Curvada, Rosca Direta, Rosca Martelo e Prancha.
+          </p>
+        </div>
+
+        <!-- Opção 5: Ficha C (Pernas Completo & Panturrilhas - Legs) -->
+        <div class="template-plan-card" onclick="loadWorkoutTemplate('legs_day')">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <strong style="color: #a855f7; font-size: 0.9rem;">🦵 Ficha C: Pernas Completo & Panturrilha</strong>
+            <span style="font-size: 0.68rem; background: rgba(168,85,247,0.15); color: #a855f7; padding: 2px 6px; border-radius: 4px; font-weight: 700;">Legs</span>
+          </div>
+          <p style="font-size: 0.72rem; color: var(--text-muted); margin: 0;">
+            Agachamento Livre, Leg Press 45°, Cadeira Extensora, Mesa Flexora e Panturrilha em Pé.
+          </p>
+        </div>
+
+        <!-- Opção 6: Ficha Glúteos & Posterior (Foco Feminino / Pernas) -->
+        <div class="template-plan-card" onclick="loadWorkoutTemplate('glutes_focus')">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <strong style="color: #ec4899; font-size: 0.9rem;">🍑 Ficha D: Glúteos & Posterior Definido</strong>
+            <span style="font-size: 0.68rem; background: rgba(236,72,153,0.15); color: #ec4899; padding: 2px 6px; border-radius: 4px; font-weight: 700;">Glúteo Focus</span>
+          </div>
+          <p style="font-size: 0.72rem; color: var(--text-muted); margin: 0;">
+            Elevação Pélvica, Stiff, Agachamento Búlgaro, Cadeira Flexora e Cadeira Abdutora.
+          </p>
+        </div>
+
+        <!-- Opção 7: Limpar Planilha do Dia -->
+        <div class="template-plan-card" style="border-color: rgba(239,68,68,0.3);" onclick="loadWorkoutTemplate('clear')">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+            <strong style="color: #ef4444; font-size: 0.85rem;">🗑️ Limpar Planilha do Dia</strong>
+            <span style="font-size: 0.65rem; color: #ef4444;">Zerar</span>
+          </div>
+          <p style="font-size: 0.7rem; color: var(--text-muted); margin: 0;">
+            Remove todos os exercícios deste dia para você montar do seu próprio jeito.
+          </p>
+        </div>
+
+      </div>
+
+      <button type="button" class="btn btn-outline btn-full" style="margin-top: 14px;" onclick="closeWorkoutTemplatesModal()">
+        Fechar
+      </button>
     </div>
   </div>
 

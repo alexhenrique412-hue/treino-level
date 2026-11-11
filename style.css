@@ -1496,3 +1496,41 @@ input, select, textarea {
   pointer-events: none;
   z-index: 200;
 }
+
+/* Quick Exercise Chips & Plan Cards */
+.quick-chip-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--text-main);
+  border-radius: 12px;
+  padding: 4px 9px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.quick-chip-btn:hover, .quick-chip-btn:active {
+  background: rgba(0, 210, 255, 0.22);
+  border-color: #00d2ff;
+  color: #00d2ff;
+  transform: translateY(-1px);
+}
+
+.template-plan-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.template-plan-card:hover, .template-plan-card:active {
+  background: rgba(0, 210, 255, 0.1);
+  border-color: var(--accent-green);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(0, 210, 255, 0.15);
+}
