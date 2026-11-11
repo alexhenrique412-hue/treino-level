@@ -578,32 +578,400 @@ let gpsElapsedSeconds = 0;
 let gpsTotalKm = 0;
 let gpsRoutePoints = [];
 let lastGpsPoint = null;
+let currentGpsActivity = 'run'; // 'run' | 'bike'
 
 // Route Viewer Modal State
 let routeModalMap = null;
 let routeModalPolyline = null;
+
+// --- JUMP ROPE SENSOR STATE (Opção 1) ---
+let ropeActive = false;
+let ropePaused = false;
+let ropeJumpCount = 0;
+let ropeElapsedSeconds = 0;
+let ropeTimerInterval = null;
+let ropeRecentJumpTimestamps = [];
+let lastJumpTimestamp = 0;
+let ropeMotionHandler = null;
 
 function switchRunSubtab(subtab) {
   triggerHaptic('light');
   currentRunSubtab = subtab;
 
   const gpsBtn = document.getElementById("subtab-gps-btn");
+  const ropeBtn = document.getElementById("subtab-rope-btn");
   const manualBtn = document.getElementById("subtab-manual-btn");
+
   const gpsView = document.getElementById("runGpsView");
+  const ropeView = document.getElementById("runRopeView");
   const manualView = document.getElementById("runManualView");
+
+  if (gpsBtn) gpsBtn.classList.remove("active");
+  if (ropeBtn) ropeBtn.classList.remove("active");
+  if (manualBtn) manualBtn.classList.remove("active");
+
+  if (gpsView) gpsView.style.display = "none";
+  if (ropeView) ropeView.style.display = "none";
+  if (manualView) manualView.style.display = "none";
 
   if (subtab === 'gps') {
     if (gpsBtn) gpsBtn.classList.add("active");
-    if (manualBtn) manualBtn.classList.remove("active");
     if (gpsView) gpsView.style.display = "block";
-    if (manualView) manualView.style.display = "none";
     initRunMapIfNeeded();
+  } else if (subtab === 'rope') {
+    if (ropeBtn) ropeBtn.classList.add("active");
+    if (ropeView) ropeView.style.display = "block";
   } else {
-    if (gpsBtn) gpsBtn.classList.remove("active");
     if (manualBtn) manualBtn.classList.add("active");
-    if (gpsView) gpsView.style.display = "none";
     if (manualView) manualView.style.display = "block";
   }
+}
+
+// --- GPS ACTIVITY SELECTOR (Opção 4: Corrida vs Ciclismo/Bike) ---
+function setGpsActivity(activity) {
+  if (gpsTracking) {
+    alert("Não é possível alternar modalidade com o GPS em gravação. Finalize ou pause a atividade atual.");
+    return;
+  }
+  triggerHaptic('light');
+  currentGpsActivity = activity;
+
+  const runBtn = document.getElementById("gpsModeRunBtn");
+  const bikeBtn = document.getElementById("gpsModeBikeBtn");
+  const startBtn = document.getElementById("btnGpsStart");
+  const hudTitle = document.getElementById("gpsHudTitle");
+  const hudSecLabel = document.getElementById("gpsHudLabelSecondary");
+  const statusText = document.getElementById("gpsStatusText");
+
+  if (activity === 'bike') {
+    if (runBtn) {
+      runBtn.classList.remove("active-activity-btn");
+      runBtn.style.borderColor = "rgba(255,255,255,0.15)";
+      runBtn.style.color = "var(--text-muted)";
+      runBtn.style.background = "transparent";
+    }
+    if (bikeBtn) {
+      bikeBtn.classList.add("active-activity-btn", "bike");
+      bikeBtn.style.borderColor = "#00d2ff";
+      bikeBtn.style.color = "#00d2ff";
+      bikeBtn.style.background = "rgba(0, 210, 255, 0.15)";
+    }
+    if (startBtn) startBtn.innerHTML = "▶ Iniciar Ciclismo GPS 🚴";
+    if (hudTitle) hudTitle.innerText = "⏱️ TEMPO DE CICLISMO";
+    if (hudSecLabel) hudSecLabel.innerText = "Velocidade Média";
+    if (statusText && !gpsTracking) statusText.innerText = "GPS pronto para Ciclismo. Toque em Iniciar e comece a pedalar!";
+    
+    // Switch polyline color to cyan for bike
+    if (routePolyline) {
+      routePolyline.setStyle({ color: '#00d2ff' });
+    }
+  } else {
+    if (bikeBtn) {
+      bikeBtn.classList.remove("active-activity-btn", "bike");
+      bikeBtn.style.borderColor = "rgba(255,255,255,0.15)";
+      bikeBtn.style.color = "var(--text-muted)";
+      bikeBtn.style.background = "transparent";
+    }
+    if (runBtn) {
+      runBtn.classList.add("active-activity-btn");
+      runBtn.style.borderColor = "var(--accent-orange)";
+      runBtn.style.color = "var(--accent-orange)";
+      runBtn.style.background = "rgba(245, 158, 11, 0.12)";
+    }
+    if (startBtn) startBtn.innerHTML = "▶ Iniciar Corrida GPS 🏃";
+    if (hudTitle) hudTitle.innerText = "⏱️ TEMPO DE CORRIDA";
+    if (hudSecLabel) hudSecLabel.innerText = "Ritmo (Pace /km)";
+    if (statusText && !gpsTracking) statusText.innerText = "GPS pronto para Corrida. Toque em Iniciar e comece a correr!";
+
+    // Switch polyline color to orange for running
+    if (routePolyline) {
+      routePolyline.setStyle({ color: '#ff5722' });
+    }
+  }
+}
+
+// --- JUMP ROPE LOGIC (Opção 1: Pular Corda com Acelerômetro Real) ---
+function startJumpRope() {
+  sfx.init();
+  triggerHaptic('success');
+
+  // Request iOS permission if available (Safari 13+)
+  if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+    DeviceMotionEvent.requestPermission().then(permissionState => {
+      if (permissionState === 'granted') {
+        beginJumpRopeTracking();
+      } else {
+        alert("Atenção: Permissão do sensor negada. Você ainda pode usar o botão '+1 Pulo' para testar.");
+        beginJumpRopeTracking();
+      }
+    }).catch(err => {
+      console.warn("DeviceMotion permission error:", err);
+      beginJumpRopeTracking();
+    });
+  } else {
+    beginJumpRopeTracking();
+  }
+}
+
+function beginJumpRopeTracking() {
+  ropeActive = true;
+  ropePaused = false;
+  ropeJumpCount = 0;
+  ropeElapsedSeconds = 0;
+  ropeRecentJumpTimestamps = [];
+  lastJumpTimestamp = 0;
+
+  requestScreenWakeLock();
+
+  // Update UI buttons
+  const startBtn = document.getElementById("btnRopeStart");
+  const pauseBtn = document.getElementById("btnRopePause");
+  const resumeBtn = document.getElementById("btnRopeResume");
+  const finishBtn = document.getElementById("btnRopeFinish");
+  const cancelBtn = document.getElementById("btnRopeCancel");
+
+  if (startBtn) startBtn.style.display = "none";
+  if (pauseBtn) pauseBtn.style.display = "inline-flex";
+  if (resumeBtn) resumeBtn.style.display = "none";
+  if (finishBtn) finishBtn.style.display = "inline-flex";
+  if (cancelBtn) cancelBtn.style.display = "inline-flex";
+
+  setRopeBadgeStatus("Pulando corda... Bora! 🪢", true);
+  updateRopeHud();
+
+  // Attach DeviceMotion sensor
+  if (!ropeMotionHandler) {
+    ropeMotionHandler = handleDeviceMotionRope;
+  }
+  window.removeEventListener('devicemotion', ropeMotionHandler);
+  window.addEventListener('devicemotion', ropeMotionHandler);
+
+  // Timer interval
+  if (ropeTimerInterval) clearInterval(ropeTimerInterval);
+  ropeTimerInterval = setInterval(() => {
+    if (ropeActive && !ropePaused) {
+      ropeElapsedSeconds++;
+      updateRopeHud();
+    }
+  }, 1000);
+}
+
+function handleDeviceMotionRope(e) {
+  if (!ropeActive || ropePaused) return;
+
+  const acc = e.accelerationIncludingGravity || e.acceleration;
+  if (!acc) return;
+
+  const ax = acc.x || 0;
+  const ay = acc.y || 0;
+  const az = acc.z || 0;
+  const magnitude = Math.sqrt(ax * ax + ay * ay + az * az);
+
+  // Sensitivity thresholds (m/s²) and debouncing intervals
+  const selectEl = document.getElementById("ropeSensitivitySelect");
+  const sens = selectEl ? selectEl.value : 'normal';
+
+  let threshold = 14.0;
+  let minIntervalMs = 270;
+
+  if (sens === 'high') {
+    threshold = 12.5;
+    minIntervalMs = 230;
+  } else if (sens === 'fast') {
+    threshold = 13.5;
+    minIntervalMs = 190;
+  }
+
+  const now = Date.now();
+  if (magnitude >= threshold && (now - lastJumpTimestamp) > minIntervalMs) {
+    lastJumpTimestamp = now;
+    recordRopeJump();
+  }
+}
+
+function recordRopeJump() {
+  ropeJumpCount++;
+  const now = Date.now();
+  ropeRecentJumpTimestamps.push(now);
+
+  triggerHaptic('light');
+
+  const countEl = document.getElementById("ropeJumpCount");
+  if (countEl) {
+    countEl.innerText = ropeJumpCount;
+    countEl.classList.add("jump-pop");
+    setTimeout(() => {
+      countEl.classList.remove("jump-pop");
+    }, 90);
+  }
+
+  // Milestone beep/haptic every 50 jumps
+  if (ropeJumpCount % 50 === 0) {
+    triggerHaptic('success');
+    if (sfx && typeof sfx.playCheck === 'function') sfx.playCheck();
+  }
+
+  updateRopeHud();
+}
+
+function simulateRopeJump() {
+  if (!ropeActive) {
+    startJumpRope();
+  }
+  recordRopeJump();
+}
+
+function updateRopeHud() {
+  // Timer MM:SS
+  const m = Math.floor(ropeElapsedSeconds / 60);
+  const s = ropeElapsedSeconds % 60;
+  const timerStr = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  const timerEl = document.getElementById("ropeLiveTimer");
+  if (timerEl) timerEl.innerText = timerStr;
+
+  // Jump count
+  const countEl = document.getElementById("ropeJumpCount");
+  if (countEl && !countEl.classList.contains("jump-pop")) {
+    countEl.innerText = ropeJumpCount;
+  }
+
+  // Cadence (jumps per minute in last 10 seconds)
+  const now = Date.now();
+  ropeRecentJumpTimestamps = ropeRecentJumpTimestamps.filter(t => (now - t) <= 10000);
+  let cadence = 0;
+  if (ropeRecentJumpTimestamps.length > 0) {
+    cadence = Math.round((ropeRecentJumpTimestamps.length / 10) * 60);
+  }
+  const cadenceEl = document.getElementById("ropeLiveCadence");
+  if (cadenceEl) cadenceEl.innerText = cadence;
+
+  // Calories: ~0.14 kcal per jump + time factor
+  const calories = Math.round((ropeJumpCount * 0.14) + (ropeElapsedSeconds / 60) * 2);
+  const calEl = document.getElementById("ropeLiveCalories");
+  if (calEl) calEl.innerText = calories;
+}
+
+function pauseJumpRope() {
+  triggerHaptic('medium');
+  ropePaused = true;
+  document.getElementById("btnRopePause").style.display = "none";
+  document.getElementById("btnRopeResume").style.display = "inline-flex";
+  setRopeBadgeStatus("Treino de corda pausado ⏸️", false);
+}
+
+function resumeJumpRope() {
+  triggerHaptic('medium');
+  ropePaused = false;
+  document.getElementById("btnRopeResume").style.display = "none";
+  document.getElementById("btnRopePause").style.display = "inline-flex";
+  setRopeBadgeStatus("Pulando corda... Bora! 🪢", true);
+}
+
+function cancelJumpRope() {
+  if (confirm("Deseja cancelar o treino de corda? Os pulos atuais serão descartados.")) {
+    stopJumpRopeTracking();
+    resetRopeHud();
+  }
+}
+
+function stopJumpRopeTracking() {
+  ropeActive = false;
+  ropePaused = false;
+  if (ropeTimerInterval) {
+    clearInterval(ropeTimerInterval);
+    ropeTimerInterval = null;
+  }
+  if (ropeMotionHandler) {
+    window.removeEventListener('devicemotion', ropeMotionHandler);
+  }
+  releaseScreenWakeLock();
+
+  const startBtn = document.getElementById("btnRopeStart");
+  const pauseBtn = document.getElementById("btnRopePause");
+  const resumeBtn = document.getElementById("btnRopeResume");
+  const finishBtn = document.getElementById("btnRopeFinish");
+  const cancelBtn = document.getElementById("btnRopeCancel");
+
+  if (startBtn) startBtn.style.display = "inline-flex";
+  if (pauseBtn) pauseBtn.style.display = "none";
+  if (resumeBtn) resumeBtn.style.display = "none";
+  if (finishBtn) finishBtn.style.display = "none";
+  if (cancelBtn) cancelBtn.style.display = "none";
+
+  setRopeBadgeStatus("Pronto para iniciar", false);
+}
+
+function resetRopeHud() {
+  ropeJumpCount = 0;
+  ropeElapsedSeconds = 0;
+  ropeRecentJumpTimestamps = [];
+  lastJumpTimestamp = 0;
+  const countEl = document.getElementById("ropeJumpCount");
+  const timerEl = document.getElementById("ropeLiveTimer");
+  const cadenceEl = document.getElementById("ropeLiveCadence");
+  const calEl = document.getElementById("ropeLiveCalories");
+
+  if (countEl) countEl.innerText = "0";
+  if (timerEl) timerEl.innerText = "00:00";
+  if (cadenceEl) cadenceEl.innerText = "0";
+  if (calEl) calEl.innerText = "0";
+}
+
+function setRopeBadgeStatus(text, isActive) {
+  const textEl = document.getElementById("ropeStatusText");
+  const dotEl = document.getElementById("ropeStatusDot");
+  if (textEl) textEl.innerText = text;
+  if (dotEl) {
+    if (isActive) dotEl.classList.add("active");
+    else dotEl.classList.remove("active");
+  }
+}
+
+function finishJumpRope() {
+  triggerHaptic('success');
+  sfx.playLevelUp();
+
+  if (ropeJumpCount < 15 && ropeElapsedSeconds < 20) {
+    if (!confirm(`Você registrou apenas ${ropeJumpCount} pulos. Deseja realmente salvar este treino?`)) {
+      return;
+    }
+  }
+
+  const minutes = Math.max(1, Math.round(ropeElapsedSeconds / 60));
+  const finalJumps = ropeJumpCount;
+  const avgCadence = Math.round(finalJumps / (minutes || 1));
+  const calories = Math.round((finalJumps * 0.14) + minutes * 2);
+
+  const now = new Date();
+  const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+
+  const ropeItem = {
+    id: "rope_" + Date.now(),
+    date: getTodayDateStr(),
+    timeStr: timeStr,
+    activity: 'rope',
+    jumps: finalJumps,
+    minutes: minutes,
+    km: 0,
+    pace: `${avgCadence} pulos/min`,
+    calories: calories,
+    isGps: false,
+    isSensor: true,
+    earnedMinutes: minutes,
+    route: null
+  };
+
+  STATE.todayRuns.push(ropeItem);
+  STATE.runningHistory.unshift(ropeItem);
+
+  // Add the rope minutes to training hours (2h = 1pt rule)
+  addTrainingMinutes(minutes, `Pular Corda (${finalJumps} pulos)`);
+
+  stopJumpRopeTracking();
+  resetRopeHud();
+  renderRunningTab();
+
+  alert(`🪢 Treino de Corda Finalizado com Sucesso!\n\n🔢 Pulos: ${finalJumps}\n⏱️ Duração: ${minutes} min\n⚡ Cadência Média: ${avgCadence} pulos/min\n🔥 Calorias: ~${calories} kcal\n\n+${minutes} minutos somados para seu Nível!`);
 }
 
 function initRunMapIfNeeded() {
@@ -743,7 +1111,10 @@ function startGpsRun() {
   gpsRoutePoints = [];
   lastGpsPoint = null;
 
-  if (routePolyline) routePolyline.setLatLngs([]);
+  if (routePolyline) {
+    routePolyline.setLatLngs([]);
+    routePolyline.setStyle({ color: currentGpsActivity === 'bike' ? '#00d2ff' : '#ff5722' });
+  }
   if (startPosMarker && leafletMap) {
     leafletMap.removeLayer(startPosMarker);
     startPosMarker = null;
@@ -760,7 +1131,11 @@ function startGpsRun() {
   document.getElementById("btnGpsResume").style.display = "none";
 
   const statusText = document.getElementById("gpsStatusText");
-  if (statusText) statusText.innerText = "🔴 Gravando rota GPS ao vivo... Bora correr!";
+  if (statusText) {
+    statusText.innerText = currentGpsActivity === 'bike' 
+      ? "🔴 Gravando pedalada GPS ao vivo... Bora pedalar! 🚴" 
+      : "🔴 Gravando rota GPS ao vivo... Bora correr! 🏃";
+  }
 
   // Start Live Timer
   gpsTimerInterval = setInterval(() => {
@@ -846,22 +1221,27 @@ function updateGpsHud() {
   // Distance
   document.getElementById("gpsLiveDistance").innerText = gpsTotalKm.toFixed(2);
 
-  // Pace (min/km)
+  // Secondary metric (Pace for running, Average Speed for bike)
   if (gpsTotalKm > 0.05) {
-    const paceDecimal = (gpsElapsedSeconds / 60) / gpsTotalKm;
-    const paceMin = Math.floor(paceDecimal);
-    const paceSec = Math.round((paceDecimal - paceMin) * 60);
-    if (paceMin < 60) {
-      document.getElementById("gpsLivePace").innerText = `${paceMin}'${String(paceSec).padStart(2, '0')}"`;
+    if (currentGpsActivity === 'bike') {
+      const avgSpeed = (gpsTotalKm / (gpsElapsedSeconds / 3600)).toFixed(1);
+      document.getElementById("gpsLivePace").innerText = `${avgSpeed} km/h`;
     } else {
-      document.getElementById("gpsLivePace").innerText = "-";
+      const paceDecimal = (gpsElapsedSeconds / 60) / gpsTotalKm;
+      const paceMin = Math.floor(paceDecimal);
+      const paceSec = Math.round((paceDecimal - paceMin) * 60);
+      if (paceMin < 60) {
+        document.getElementById("gpsLivePace").innerText = `${paceMin}'${String(paceSec).padStart(2, '0')}"`;
+      } else {
+        document.getElementById("gpsLivePace").innerText = "-";
+      }
     }
 
     // Speed km/h
     const speed = (gpsTotalKm / (gpsElapsedSeconds / 3600)).toFixed(1);
     document.getElementById("gpsLiveSpeed").innerText = speed;
   } else {
-    document.getElementById("gpsLivePace").innerText = "-";
+    document.getElementById("gpsLivePace").innerText = currentGpsActivity === 'bike' ? "0.0 km/h" : "-";
     document.getElementById("gpsLiveSpeed").innerText = "0.0";
   }
 }
@@ -872,7 +1252,11 @@ function pauseGpsRun() {
   document.getElementById("btnGpsPause").style.display = "none";
   document.getElementById("btnGpsResume").style.display = "inline-flex";
   const statusText = document.getElementById("gpsStatusText");
-  if (statusText) statusText.innerText = "⏸ Corrida pausada. Toque em Continuar para retomar.";
+  if (statusText) {
+    statusText.innerText = currentGpsActivity === 'bike'
+      ? "⏸ Ciclismo pausado. Toque em Continuar para retomar."
+      : "⏸ Corrida pausada. Toque em Continuar para retomar.";
+  }
 }
 
 function resumeGpsRun() {
@@ -881,11 +1265,16 @@ function resumeGpsRun() {
   document.getElementById("btnGpsResume").style.display = "none";
   document.getElementById("btnGpsPause").style.display = "inline-flex";
   const statusText = document.getElementById("gpsStatusText");
-  if (statusText) statusText.innerText = "🔴 Gravando rota GPS ao vivo...";
+  if (statusText) {
+    statusText.innerText = currentGpsActivity === 'bike'
+      ? "🔴 Gravando pedalada GPS ao vivo... Bora pedalar! 🚴"
+      : "🔴 Gravando rota GPS ao vivo... Bora correr! 🏃";
+  }
 }
 
 function cancelGpsRun() {
-  if (confirm("Deseja realmente cancelar esta corrida? Os dados dela não serão salvos.")) {
+  const actName = currentGpsActivity === 'bike' ? "este pedal de bike" : "esta corrida";
+  if (confirm(`Deseja realmente cancelar ${actName}? Os dados não serão salvos.`)) {
     stopGpsTracking();
     resetGpsHud();
   }
@@ -911,7 +1300,11 @@ function stopGpsTracking() {
   document.getElementById("btnGpsCancel").style.display = "none";
 
   const statusText = document.getElementById("gpsStatusText");
-  if (statusText) statusText.innerText = "GPS pronto. Toque em Iniciar e comece a correr!";
+  if (statusText) {
+    statusText.innerText = currentGpsActivity === 'bike'
+      ? "GPS pronto para Ciclismo. Toque em Iniciar e comece a pedalar!"
+      : "GPS pronto para Corrida. Toque em Iniciar e comece a correr!";
+  }
 }
 
 function resetGpsHud() {
@@ -921,7 +1314,7 @@ function resetGpsHud() {
   lastGpsPoint = null;
   document.getElementById("gpsLiveTimer").innerText = "00:00:00";
   document.getElementById("gpsLiveDistance").innerText = "0.00";
-  document.getElementById("gpsLivePace").innerText = "0'00\"";
+  document.getElementById("gpsLivePace").innerText = currentGpsActivity === 'bike' ? "0.0 km/h" : "0'00\"";
   document.getElementById("gpsLiveSpeed").innerText = "0.0";
   if (routePolyline) routePolyline.setLatLngs([]);
 }
@@ -930,24 +1323,31 @@ function finishGpsRun() {
   triggerHaptic('success');
   sfx.playLevelUp();
 
+  const isBike = currentGpsActivity === 'bike';
   const minutes = Math.max(1, Math.round(gpsElapsedSeconds / 60));
   const finalKm = parseFloat(gpsTotalKm.toFixed(2));
 
   let paceStr = "-";
   if (finalKm > 0) {
-    const paceDecimal = minutes / finalKm;
-    const paceMin = Math.floor(paceDecimal);
-    const paceSec = Math.round((paceDecimal - paceMin) * 60);
-    paceStr = `${paceMin}'${String(paceSec).padStart(2, '0')}"/km`;
+    if (isBike) {
+      const avgSpeed = (finalKm / (minutes / 60)).toFixed(1);
+      paceStr = `${avgSpeed} km/h`;
+    } else {
+      const paceDecimal = minutes / finalKm;
+      const paceMin = Math.floor(paceDecimal);
+      const paceSec = Math.round((paceDecimal - paceMin) * 60);
+      paceStr = `${paceMin}'${String(paceSec).padStart(2, '0')}"/km`;
+    }
   }
 
   const now = new Date();
   const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
   const runItem = {
-    id: "run_" + Date.now(),
+    id: (isBike ? "bike_" : "run_") + Date.now(),
     date: getTodayDateStr(),
     timeStr: timeStr,
+    activity: isBike ? 'bike' : 'run',
     km: finalKm,
     minutes: minutes,
     pace: paceStr,
@@ -959,14 +1359,19 @@ function finishGpsRun() {
   STATE.todayRuns.push(runItem);
   STATE.runningHistory.unshift(runItem);
 
-  // Add the running minutes to training hours (2h = 1pt rule!)
-  addTrainingMinutes(minutes, `Corrida GPS (${finalKm} km)`);
+  // Add the minutes to training hours (2h = 1pt rule!)
+  const actLabel = isBike ? `Ciclismo GPS (${finalKm} km)` : `Corrida GPS (${finalKm} km)`;
+  addTrainingMinutes(minutes, actLabel);
 
   stopGpsTracking();
   resetGpsHud();
   renderRunningTab();
 
-  alert(`🏁 Corrida finalizada com sucesso!\n\n📏 Distância: ${finalKm} km\n⏱️ Duração: ${minutes} min\n⚡ Ritmo: ${paceStr}\n\nSua rota foi salva no Histórico!`);
+  if (isBike) {
+    alert(`🚴 Ciclismo finalizado com sucesso!\n\n📏 Distância: ${finalKm} km\n⏱️ Duração: ${minutes} min\n⚡ Vel. Média: ${paceStr}\n\nSua rota foi salva no Histórico!`);
+  } else {
+    alert(`🏁 Corrida finalizada com sucesso!\n\n📏 Distância: ${finalKm} km\n⏱️ Duração: ${minutes} min\n⚡ Ritmo: ${paceStr}\n\nSua rota foi salva no Histórico!`);
+  }
 }
 
 // --- ROUTE MODAL VIEWER (View saved GPS routes on satellite map) ---
@@ -974,19 +1379,24 @@ function openRouteModal(runId) {
   triggerHaptic('light');
   const run = STATE.runningHistory.find(r => r.id === runId);
   if (!run || !run.route || run.route.length === 0) {
-    alert("Esta corrida foi registrada manualmente e não possui rota de mapa.");
+    alert("Esta atividade foi registrada manualmente e não possui rota de mapa.");
     return;
   }
 
-  document.getElementById("routeModalTitle").innerText = `🗺️ Corrida de ${run.km} km`;
+  const isBike = run.activity === 'bike';
+  document.getElementById("routeModalTitle").innerText = isBike 
+    ? `🚴 Ciclismo de ${run.km} km` 
+    : `🏃 Corrida de ${run.km} km`;
+  
+  const metricLabel = isBike ? "Vel. Média:" : "Ritmo:";
   document.getElementById("routeModalDetails").innerHTML = `
-    <strong>Data:</strong> ${run.date} às ${run.timeStr} • <strong>Tempo:</strong> ${run.minutes} min • <strong>Ritmo:</strong> ${run.pace}
+    <strong>Data:</strong> ${run.date} às ${run.timeStr} • <strong>Tempo:</strong> ${run.minutes} min • <strong>${metricLabel}</strong> ${run.pace}
   `;
 
   document.getElementById("routeModal").classList.add("open");
 
   setTimeout(() => {
-    initRouteModalMap(run.route);
+    initRouteModalMap(run.route, isBike);
   }, 250);
 }
 
@@ -995,7 +1405,7 @@ function closeRouteModal() {
   document.getElementById("routeModal").classList.remove("open");
 }
 
-function initRouteModalMap(routePoints) {
+function initRouteModalMap(routePoints, isBike) {
   if (typeof L === 'undefined') return;
 
   const container = document.getElementById("routeModalMap");
@@ -1015,9 +1425,10 @@ function initRouteModalMap(routePoints) {
     attribution: '© Esri Satellite'
   }).addTo(routeModalMap);
 
-  // Orange route line (Strava style)
+  // Line color: Cyan for bike, Orange for running
+  const lineColor = isBike ? '#00d2ff' : '#ff5722';
   routeModalPolyline = L.polyline(routePoints, {
-    color: '#ff5722',
+    color: lineColor,
     weight: 6,
     opacity: 0.95,
     lineCap: 'round',
@@ -1035,7 +1446,7 @@ function initRouteModalMap(routePoints) {
       weight: 2,
       fillColor: '#10b981',
       fillOpacity: 1
-    }).addTo(routeModalMap).bindPopup("Início da Corrida");
+    }).addTo(routeModalMap).bindPopup(isBike ? "Início do Ciclismo" : "Início da Corrida");
 
     // End Pin (Red)
     L.circleMarker(routePoints[routePoints.length - 1], {
@@ -1044,7 +1455,7 @@ function initRouteModalMap(routePoints) {
       weight: 2,
       fillColor: '#ef4444',
       fillOpacity: 1
-    }).addTo(routeModalMap).bindPopup("Fim da Corrida");
+    }).addTo(routeModalMap).bindPopup(isBike ? "Fim do Ciclismo" : "Fim da Corrida");
   }
 }
 
@@ -1116,7 +1527,7 @@ function handleSaveRun(e) {
   renderRunningTab();
 }
 
-// --- EDIT & DELETE RUN FUNCTIONS ---
+// --- EDIT & DELETE RUN / CARDIO FUNCTIONS ---
 function openEditRunModal(runId) {
   triggerHaptic('light');
   const run = STATE.runningHistory.find(r => r.id === runId);
@@ -1125,21 +1536,41 @@ function openEditRunModal(runId) {
   document.getElementById("editRunId").value = runId;
   document.getElementById("editRunNewMinutes").value = run.minutes;
 
+  const isRope = run.activity === 'rope';
+  const isBike = run.activity === 'bike';
   const isGps = !!(run.isGps || (run.route && run.route.length > 0));
+  const isOfficial = isGps || run.isSensor || isRope;
+
+  let activityHeader = `🏃 <strong>Distância:</strong> ${run.km} km`;
+  if (isRope) {
+    activityHeader = `🪢 <strong>Pular Corda:</strong> ${run.jumps || 0} pulos`;
+  } else if (isBike) {
+    activityHeader = `🚴 <strong>Ciclismo / Bike:</strong> ${run.km} km`;
+  }
+
+  let modalBadge = '<span style="color: var(--accent-orange); font-weight:700;">📝 Manual / Esteira (Sem Pontos)</span>';
+  if (isRope) {
+    modalBadge = '<span style="color: #60a5fa; font-weight:700;">📲 Sensor Oficial (Pontua)</span>';
+  } else if (isBike) {
+    modalBadge = '<span style="color: #00d2ff; font-weight:700;">🛰️ GPS Bike Oficial (Pontua)</span>';
+  } else if (isGps) {
+    modalBadge = '<span style="color: var(--accent-green); font-weight:700;">🛰️ GPS Corrida Oficial (Pontua)</span>';
+  }
+
   const infoEl = document.getElementById("editRunInfo");
   infoEl.innerHTML = `
-    <div><strong>🏃 Distância:</strong> ${run.km} km</div>
+    <div>${activityHeader}</div>
     <div><strong>📅 Data:</strong> ${run.date} às ${run.timeStr}</div>
     <div><strong>⏱️ Tempo Atual:</strong> ${run.minutes} minutos</div>
-    <div style="margin-top: 4px;"><strong>Modalidade:</strong> ${isGps ? '<span style="color: var(--accent-green); font-weight:700;">🛰️ GPS Oficial (Pontua)</span>' : '<span style="color: var(--accent-orange); font-weight:700;">📝 Manual / Esteira (Sem Pontos)</span>'}</div>
+    <div style="margin-top: 4px;"><strong>Modalidade:</strong> ${modalBadge}</div>
   `;
 
   const noteEl = document.getElementById("editRunPointsNote");
-  if (isGps) {
-    noteEl.innerHTML = `💡 Como esta corrida é <strong>GPS Oficial</strong>, ao alterar os minutos, sua pontuação de nível e horas totais de treino serão <strong>recalculadas automaticamente</strong> (2 horas = 1 ponto).`;
+  if (isOfficial) {
+    noteEl.innerHTML = `💡 Como esta atividade é <strong>Oficial (GPS / Sensor)</strong>, ao alterar os minutos, sua pontuação de nível e horas de treino serão <strong>recalculadas automaticamente</strong> (2 horas = 1 ponto).`;
     noteEl.style.color = "var(--accent-green)";
   } else {
-    noteEl.innerHTML = `ℹ️ Esta corrida foi registrada <strong>manualmente</strong>. O tempo e ritmo médio serão atualizados, mas não concedem pontos de nível (regra anti-fraude GPS).`;
+    noteEl.innerHTML = `ℹ️ Esta atividade foi registrada <strong>manualmente</strong>. O tempo será atualizado, mas não concede pontos de nível (regra anti-fraude).`;
     noteEl.style.color = "var(--text-muted)";
   }
 
@@ -1167,12 +1598,20 @@ function handleSaveEditRun(e) {
   if (!run) return;
 
   const oldMinutes = run.minutes || 0;
+  const isRope = run.activity === 'rope';
+  const isBike = run.activity === 'bike';
   const isGps = !!(run.isGps || (run.route && run.route.length > 0));
+  const isOfficial = isGps || run.isSensor || isRope;
 
   run.minutes = newMinutes;
 
-  // Recalculate pace
-  if (run.km > 0) {
+  // Recalculate metrics
+  if (isRope) {
+    run.pace = `${Math.round((run.jumps || 0) / newMinutes)} pulos/min`;
+  } else if (isBike && run.km > 0) {
+    const avgSpeed = (run.km / (newMinutes / 60)).toFixed(1);
+    run.pace = `${avgSpeed} km/h`;
+  } else if (run.km > 0) {
     const paceDecimal = newMinutes / run.km;
     const paceMin = Math.floor(paceDecimal);
     const paceSec = Math.round((paceDecimal - paceMin) * 60);
@@ -1186,10 +1625,9 @@ function handleSaveEditRun(e) {
     todayRun.pace = run.pace;
   }
 
-  // Recalculate points if GPS
-  if (isGps) {
+  // Recalculate points if Official (GPS / Sensor)
+  if (isOfficial) {
     const diff = newMinutes - oldMinutes;
-    run.isGps = true;
     run.earnedMinutes = (typeof run.earnedMinutes === 'number' ? run.earnedMinutes : oldMinutes) + diff;
     STATE.totalMinutes = Math.max(0, (STATE.totalMinutes || 0) + diff);
     updateLevelAndPoints();
@@ -1199,7 +1637,7 @@ function handleSaveEditRun(e) {
   closeEditRunModal();
   renderRunningTab();
   triggerHaptic('success');
-  alert(`✓ Tempo da corrida atualizado para ${newMinutes} minutos com sucesso!`);
+  alert(`✓ Tempo da atividade atualizado para ${newMinutes} minutos com sucesso!`);
 }
 
 function deleteRun(runId) {
@@ -1208,31 +1646,46 @@ function deleteRun(runId) {
   if (index === -1) return;
 
   const run = STATE.runningHistory[index];
+  const isRope = run.activity === 'rope';
+  const isBike = run.activity === 'bike';
   const isGps = !!(run.isGps || (run.route && run.route.length > 0));
+  const isOfficial = isGps || run.isSensor || isRope;
   
-  // Calculate if this run had contributed training minutes to level
+  // Calculate if this session contributed minutes to level
   let earnedMinutes = 0;
   if (typeof run.earnedMinutes === 'number') {
     earnedMinutes = run.earnedMinutes;
-  } else if (isGps) {
+  } else if (isOfficial) {
     earnedMinutes = run.minutes || 0;
   } else if (!('isGps' in run)) {
-    // Legacy run prior to anti-cheat rule
     earnedMinutes = run.minutes || 0;
   }
 
+  let actDesc = `${run.km} km (${run.minutes} min)`;
+  if (isRope) {
+    actDesc = `corda de ${run.jumps || 0} pulos (${run.minutes} min)`;
+  } else if (isBike) {
+    actDesc = `ciclismo de ${run.km} km (${run.minutes} min)`;
+  }
+
   const confirmMsg = earnedMinutes > 0
-    ? `Deseja realmente apagar esta corrida de ${run.km} km (${run.minutes} min)?\n\n⚠️ Esta corrida gerou ${earnedMinutes} minutos de treino. Seus pontos e nível serão recalculados automaticamente.`
-    : `Deseja realmente apagar esta corrida de ${run.km} km (${run.minutes} min) do seu histórico?`;
+    ? `Deseja realmente apagar esta atividade de ${actDesc}?\n\n⚠️ Esta atividade gerou ${earnedMinutes} minutos de treino. Seus pontos e nível serão recalculados automaticamente.`
+    : `Deseja realmente apagar esta atividade de ${actDesc} do seu histórico?`;
 
   if (!confirm(confirmMsg)) return;
 
   // Deduct points/minutes if it had earned minutes
   if (earnedMinutes > 0) {
     STATE.totalMinutes = Math.max(0, (STATE.totalMinutes || 0) - earnedMinutes);
-    // Also remove from todaySessions / workoutHistory if matched
-    STATE.todaySessions = (STATE.todaySessions || []).filter(s => !(s.type && s.type.includes('Corrida') && s.minutes === run.minutes && s.date === run.date));
-    STATE.workoutHistory = (STATE.workoutHistory || []).filter(s => !(s.type && s.type.includes('Corrida') && s.minutes === run.minutes && s.date === run.date));
+    // Remove from todaySessions / workoutHistory if matched
+    STATE.todaySessions = (STATE.todaySessions || []).filter(s => {
+      const isCardio = s.type && (s.type.includes('Corrida') || s.type.includes('Ciclismo') || s.type.includes('Corda'));
+      return !(isCardio && s.minutes === run.minutes && s.date === run.date);
+    });
+    STATE.workoutHistory = (STATE.workoutHistory || []).filter(s => {
+      const isCardio = s.type && (s.type.includes('Corrida') || s.type.includes('Ciclismo') || s.type.includes('Corda'));
+      return !(isCardio && s.minutes === run.minutes && s.date === run.date);
+    });
     updateLevelAndPoints();
   }
 
@@ -1248,21 +1701,21 @@ function deleteRun(runId) {
 function clearAllRunsHistory() {
   triggerHaptic('light');
   if (!STATE.runningHistory || STATE.runningHistory.length === 0) {
-    alert("Seu histórico de corridas já está vazio.");
+    alert("Seu histórico de cardio já está vazio.");
     return;
   }
 
-  if (!confirm("⚠️ Atenção: Deseja apagar TODO o seu histórico de corridas?\n\nTodas as corridas serão excluídas e os minutos que pontuaram serão descontados do seu nível.")) {
+  if (!confirm("⚠️ Atenção: Deseja apagar TODO o seu histórico de cardio (Corrida, Bike e Corda)?\n\nTodas as atividades serão excluídas e os minutos oficiais serão recalculados no seu nível.")) {
     return;
   }
 
   // Calculate total minutes to deduct
   let totalDeduction = 0;
   STATE.runningHistory.forEach(run => {
-    const isGps = !!(run.isGps || (run.route && run.route.length > 0));
+    const isOfficial = !!(run.isGps || run.isSensor || run.activity === 'rope' || (run.route && run.route.length > 0));
     if (typeof run.earnedMinutes === 'number') {
       totalDeduction += run.earnedMinutes;
-    } else if (isGps) {
+    } else if (isOfficial) {
       totalDeduction += (run.minutes || 0);
     } else if (!('isGps' in run)) {
       totalDeduction += (run.minutes || 0);
@@ -1271,8 +1724,8 @@ function clearAllRunsHistory() {
 
   if (totalDeduction > 0) {
     STATE.totalMinutes = Math.max(0, (STATE.totalMinutes || 0) - totalDeduction);
-    STATE.todaySessions = (STATE.todaySessions || []).filter(s => !(s.type && s.type.includes('Corrida')));
-    STATE.workoutHistory = (STATE.workoutHistory || []).filter(s => !(s.type && s.type.includes('Corrida')));
+    STATE.todaySessions = (STATE.todaySessions || []).filter(s => !(s.type && (s.type.includes('Corrida') || s.type.includes('Ciclismo') || s.type.includes('Corda'))));
+    STATE.workoutHistory = (STATE.workoutHistory || []).filter(s => !(s.type && (s.type.includes('Corrida') || s.type.includes('Ciclismo') || s.type.includes('Corda'))));
     updateLevelAndPoints();
   }
 
@@ -1282,7 +1735,7 @@ function clearAllRunsHistory() {
   saveState();
   renderRunningTab();
   triggerHaptic('success');
-  alert(`✓ Histórico de corridas apagado com sucesso!${totalDeduction > 0 ? ` (-${totalDeduction} min ajustados)` : ''}`);
+  alert(`✓ Histórico de cardio apagado com sucesso!${totalDeduction > 0 ? ` (-${totalDeduction} min ajustados)` : ''}`);
 }
 
 // --- DAILY CHALLENGE CLAIM ---
@@ -2394,45 +2847,71 @@ function renderWorkoutTab() {
 }
 
 function renderRunningTab() {
-  const todayKm = STATE.todayRuns.reduce((acc, r) => acc + (r.km || 0), 0);
-  const todayMins = STATE.todayRuns.reduce((acc, r) => acc + (r.minutes || 0), 0);
-  const totalGeneralKm = STATE.runningHistory.reduce((acc, r) => acc + (r.km || 0), 0);
+  const todayRuns = STATE.todayRuns || [];
+  const history = STATE.runningHistory || [];
 
-  document.getElementById("runHeroKmToday").innerText = todayKm.toFixed(1);
-  document.getElementById("runHeroTimeToday").innerText = `${todayMins}m`;
-  document.getElementById("runHeroKmTotal").innerText = totalGeneralKm.toFixed(1);
+  const todayKm = todayRuns.reduce((acc, r) => acc + (r.km || 0), 0);
+  const todayMins = todayRuns.reduce((acc, r) => acc + (r.minutes || 0), 0);
+  const todayJumps = todayRuns.reduce((acc, r) => acc + (r.jumps || 0), 0);
+  const totalGeneralKm = history.reduce((acc, r) => acc + (r.km || 0), 0);
+
+  const heroKmEl = document.getElementById("runHeroKmToday");
+  const heroTimeEl = document.getElementById("runHeroTimeToday");
+  const heroJumpsEl = document.getElementById("runHeroJumpsToday");
+
+  if (heroKmEl) heroKmEl.innerText = todayKm.toFixed(1);
+  if (heroTimeEl) heroTimeEl.innerText = `${todayMins}m`;
+  if (heroJumpsEl) heroJumpsEl.innerText = todayJumps.toLocaleString('pt-BR');
 
   const historyEl = document.getElementById("runningHistoryList");
-  if (STATE.runningHistory.length === 0) {
+  if (history.length === 0) {
     historyEl.innerHTML = `
       <p style="color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 14px 0;">
-        Nenhuma corrida registrada ainda. Amarre os tênis e bora! 👟
+        Nenhuma atividade de cardio registrada ainda. Escolha GPS ou Corda e bora! ⚡
       </p>
     `;
   } else {
-    historyEl.innerHTML = STATE.runningHistory.slice(0, 20).map(r => {
+    historyEl.innerHTML = history.slice(0, 25).map(r => {
+      const isRope = r.activity === 'rope' || r.isSensor;
+      const isBike = r.activity === 'bike';
       const isGps = !!(r.isGps || (r.route && r.route.length > 0));
-      const points = isGps ? (r.minutes / 120).toFixed(2) : '0.00';
-      const badgeStyle = isGps 
-        ? 'background: rgba(16,185,129,0.15); color: var(--accent-green); border: 1px solid rgba(16,185,129,0.3); font-weight:700;' 
-        : 'background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid rgba(255,255,255,0.1);';
-      const badgeText = isGps ? `+${points} pt` : `0 pt (Manual)`;
-      const typeTag = isGps 
-        ? `<span style="font-size: 0.65rem; color: var(--accent-green); background: rgba(16,185,129,0.12); padding: 1px 6px; border-radius: 4px; font-weight: 700; margin-left: 6px;">🛰️ GPS</span>`
-        : `<span style="font-size: 0.65rem; color: var(--text-muted); background: rgba(255,255,255,0.06); padding: 1px 6px; border-radius: 4px; margin-left: 6px;">📝 Esteira</span>`;
+      const isOfficial = isGps || isRope || r.isSensor;
+      const points = isOfficial ? (r.minutes / 120).toFixed(2) : '0.00';
+
+      let badgeStyle = 'background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid rgba(255,255,255,0.1);';
+      let badgeText = `0 pt (Manual)`;
+      let typeTag = `<span style="font-size: 0.65rem; color: var(--text-muted); background: rgba(255,255,255,0.06); padding: 1px 6px; border-radius: 4px; margin-left: 6px;">📝 Esteira</span>`;
+      let primaryLine = `<strong style="color: #fff; font-size: 0.95rem;">🏃‍♂️ ${r.km} km</strong> <span style="color: var(--text-muted); font-size: 0.85rem;">em</span> <strong style="color: var(--accent-green); font-size: 0.95rem;">${r.minutes} min</strong>`;
+      let secondaryLine = `Data: ${r.date} às ${r.timeStr} • Ritmo: <span style="color: var(--accent-orange); font-weight: 700;">${r.pace}</span>`;
+
+      if (isRope) {
+        badgeStyle = 'background: rgba(59,130,246,0.15); color: #60a5fa; border: 1px solid rgba(59,130,246,0.3); font-weight:700;';
+        badgeText = `+${points} pt`;
+        typeTag = `<span style="font-size: 0.65rem; color: #60a5fa; background: rgba(59,130,246,0.15); padding: 1px 6px; border-radius: 4px; font-weight: 700; margin-left: 6px;">📲 Sensor Corda</span>`;
+        primaryLine = `<strong style="color: #fff; font-size: 0.95rem;">🪢 ${r.jumps || 0} pulos</strong> <span style="color: var(--text-muted); font-size: 0.85rem;">em</span> <strong style="color: var(--accent-green); font-size: 0.95rem;">${r.minutes} min</strong>`;
+        secondaryLine = `Data: ${r.date} às ${r.timeStr} • Cadência: <span style="color: #60a5fa; font-weight: 700;">${r.pace}</span>${r.calories ? ` • ~${r.calories} kcal` : ''}`;
+      } else if (isBike) {
+        badgeStyle = 'background: rgba(0,210,255,0.15); color: #00d2ff; border: 1px solid rgba(0,210,255,0.3); font-weight:700;';
+        badgeText = `+${points} pt`;
+        typeTag = `<span style="font-size: 0.65rem; color: #00d2ff; background: rgba(0,210,255,0.15); padding: 1px 6px; border-radius: 4px; font-weight: 700; margin-left: 6px;">🚴 GPS Bike</span>`;
+        primaryLine = `<strong style="color: #fff; font-size: 0.95rem;">🚴 ${r.km} km</strong> <span style="color: var(--text-muted); font-size: 0.85rem;">em</span> <strong style="color: var(--accent-green); font-size: 0.95rem;">${r.minutes} min</strong>`;
+        secondaryLine = `Data: ${r.date} às ${r.timeStr} • Vel. Média: <span style="color: #00d2ff; font-weight: 700;">${r.pace}</span>`;
+      } else if (isGps) {
+        badgeStyle = 'background: rgba(16,185,129,0.15); color: var(--accent-green); border: 1px solid rgba(16,185,129,0.3); font-weight:700;';
+        badgeText = `+${points} pt`;
+        typeTag = `<span style="font-size: 0.65rem; color: var(--accent-green); background: rgba(16,185,129,0.12); padding: 1px 6px; border-radius: 4px; font-weight: 700; margin-left: 6px;">🏃‍♂️ GPS Corrida</span>`;
+      }
 
       return `
       <div class="session-item" style="display: flex; flex-direction: column; align-items: stretch; gap: 8px; padding: 12px; margin-bottom: 8px;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
           <div style="flex: 1;">
             <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
-              <strong style="color: #fff; font-size: 0.95rem;">🏃‍♂️ ${r.km} km</strong>
-              <span style="color: var(--text-muted); font-size: 0.85rem;">em</span>
-              <strong style="color: var(--accent-green); font-size: 0.95rem;">${r.minutes} min</strong>
+              ${primaryLine}
               ${typeTag}
             </div>
             <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 3px;">
-              Data: ${r.date} às ${r.timeStr} • Ritmo: <span style="color: var(--accent-orange); font-weight: 700;">${r.pace}</span>
+              ${secondaryLine}
             </div>
           </div>
           <span class="session-badge" style="${badgeStyle}; white-space: nowrap;">${badgeText}</span>

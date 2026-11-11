@@ -233,52 +233,65 @@
 
     </section>
 
-    <!-- TAB 3: CORRIDA (CARDIO, TEMPO & KM) -->
+    <!-- TAB 3: CARDIO (GPS CORRIDA, BIKE & PULAR CORDA) -->
     <section id="tab-running" class="tab-content">
       
       <!-- Run Hero / Stats -->
       <div class="run-stats-card">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <h2 style="font-size: 1.15rem; font-weight: 800;">🏃‍♂️ Monitor de Corrida</h2>
-          <span style="font-size: 0.75rem; color: var(--accent-red); font-weight: 700;">Cardio & Km</span>
+          <h2 style="font-size: 1.15rem; font-weight: 800;">⚡ Monitor de Cardio & GPS</h2>
+          <span style="font-size: 0.75rem; color: var(--accent-orange); font-weight: 700;">Corrida • Bike • Corda</span>
         </div>
         <p style="color: var(--text-muted); font-size: 0.75rem; margin-top: 4px;">
-          Registre seu tempo e km corridos. O tempo de corrida soma diretamente nas suas 2 horas para ganhar pontos!
+          Rastreie Corrida e Ciclismo com mapa via GPS ou conte pulos de Corda pelo sensor do celular. O tempo de cardio soma diretamente nas suas 2h para ganhar pontos!
         </p>
 
         <div class="run-grid">
           <div class="run-grid-item">
-            <div class="label">Km Hoje</div>
+            <div class="label">Km Cardio Hoje</div>
             <div class="val" id="runHeroKmToday">0.0</div>
           </div>
           <div class="run-grid-item">
-            <div class="label">Tempo Corrida</div>
+            <div class="label">Tempo Cardio</div>
             <div class="val" id="runHeroTimeToday">0m</div>
           </div>
           <div class="run-grid-item">
-            <div class="label">Km Total Geral</div>
-            <div class="val" id="runHeroKmTotal">0.0</div>
+            <div class="label">Pulos Corda Hoje</div>
+            <div class="val" id="runHeroJumpsToday" style="color: #60a5fa;">0</div>
           </div>
         </div>
       </div>
 
-      <!-- Segmented Control: GPS ao Vivo vs Registro Manual -->
+      <!-- Segmented Control: GPS vs Pular Corda vs Manual -->
       <div class="segmented-control" style="margin-top: 14px;">
         <button class="segmented-btn active" id="subtab-gps-btn" onclick="switchRunSubtab('gps')">
-          🛰️ Rastrear GPS ao Vivo (Mapa)
+          🛰️ GPS (Corrida / Bike)
+        </button>
+        <button class="segmented-btn" id="subtab-rope-btn" onclick="switchRunSubtab('rope')">
+          🪢 Pular Corda (Sensor)
         </button>
         <button class="segmented-btn" id="subtab-manual-btn" onclick="switchRunSubtab('manual')">
-          📝 Registro Manual (Esteira)
+          📝 Esteira (Manual)
         </button>
       </div>
 
-      <!-- VIEW A: RASTREADOR GPS AO VIVO (ESTILO STRAVA) -->
+      <!-- VIEW A: RASTREADOR GPS AO VIVO (CORRIDA & CICLISMO/BIKE) -->
       <div id="runGpsView">
         
+        <!-- Activity Mode Selector: Corrida vs Bike -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
+          <button type="button" class="btn btn-outline active-activity-btn" id="gpsModeRunBtn" onclick="setGpsActivity('run')" style="padding: 10px; font-size: 0.85rem; font-weight: 800; border-color: var(--accent-orange); color: var(--accent-orange); background: rgba(245, 158, 11, 0.12);">
+            🏃 Corrida na Rua
+          </button>
+          <button type="button" class="btn btn-outline" id="gpsModeBikeBtn" onclick="setGpsActivity('bike')" style="padding: 10px; font-size: 0.85rem; font-weight: 800; border-color: rgba(255,255,255,0.15); color: var(--text-muted); background: transparent;">
+            🚴 Ciclismo / Bike
+          </button>
+        </div>
+
         <!-- Live HUD (Head-Up Display) -->
         <div class="run-hud">
           <div class="run-hud-main">
-            <span style="font-size: 0.68rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">⏱️ TEMPO DE CORRIDA</span>
+            <span id="gpsHudTitle" style="font-size: 0.68rem; color: var(--text-muted); font-weight: 800; text-transform: uppercase;">⏱️ TEMPO DE CORRIDA</span>
             <div class="run-hud-time" id="gpsLiveTimer">00:00:00</div>
           </div>
           <div class="run-hud-grid">
@@ -286,9 +299,9 @@
               <div class="val" id="gpsLiveDistance">0.00</div>
               <div class="label">Quilômetros</div>
             </div>
-            <div class="run-hud-item">
+            <div class="run-hud-item" id="gpsHudItemSecondary">
               <div class="val" id="gpsLivePace" style="color: #60a5fa;">0'00"</div>
-              <div class="label">Ritmo (Pace /km)</div>
+              <div class="label" id="gpsHudLabelSecondary">Ritmo (Pace /km)</div>
             </div>
             <div class="run-hud-item">
               <div class="val" id="gpsLiveSpeed" style="color: var(--accent-green);">0.0</div>
@@ -300,7 +313,7 @@
         <!-- GPS Status Bar -->
         <div class="map-gps-status" id="gpsStatusContainer">
           <span class="gps-pulse-dot" id="gpsPulseDot"></span>
-          <span id="gpsStatusText">GPS pronto. Toque em Iniciar e comece a correr!</span>
+          <span id="gpsStatusText">GPS pronto. Toque em Iniciar e comece a treinar!</span>
         </div>
 
         <!-- Leaflet Map Container -->
@@ -336,13 +349,90 @@
 
       </div>
 
-      <!-- VIEW B: REGISTRO MANUAL (ESTEIRA / INDOOR) -->
+      <!-- VIEW B: PULAR CORDA COM SENSOR REAL (ACELERÔMETRO DO CELULAR) -->
+      <div id="runRopeView" style="display: none;">
+        
+        <!-- Sensor Instructions Card -->
+        <div style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: var(--radius-md); padding: 12px; margin-bottom: 12px; font-size: 0.78rem; line-height: 1.45; color: #93c5fd;">
+          📲 <strong>Sensor Inteligente de Saltos:</strong> Coloque o celular no <strong>bolso da bermuda</strong> ou segure-o firme na mão enquanto pula. O acelerômetro mede o impacto de cada salto em tempo real, calculando pulos, cadência e pontuando seu nível!
+        </div>
+
+        <!-- Jump Rope Live HUD -->
+        <div class="rope-hud-card" id="ropeHudCard">
+          
+          <div class="rope-hud-status-badge" id="ropeStatusBadge">
+            <span class="rope-status-dot" id="ropeStatusDot"></span>
+            <span id="ropeStatusText">Pronto para iniciar</span>
+          </div>
+
+          <!-- Giant Jump Counter Display -->
+          <div class="rope-jump-display" id="ropeJumpDisplay">
+            <div class="rope-jump-number" id="ropeJumpCount">0</div>
+            <div class="rope-jump-label">PULOS REGISTRADOS</div>
+          </div>
+
+          <!-- Rope Secondary Stats Grid -->
+          <div class="run-hud-grid" style="margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.08);">
+            <div class="run-hud-item">
+              <div class="val" id="ropeLiveCadence" style="color: #60a5fa;">0</div>
+              <div class="label">Pulos / min</div>
+            </div>
+            <div class="run-hud-item">
+              <div class="val" id="ropeLiveTimer" style="color: #fff;">00:00</div>
+              <div class="label">Duração</div>
+            </div>
+            <div class="run-hud-item">
+              <div class="val" id="ropeLiveCalories" style="color: var(--accent-orange);">0</div>
+              <div class="label">Calorias (kcal)</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Sensor Sensitivity & Test Controls -->
+        <div style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+          <div style="font-size: 0.75rem; color: var(--text-muted);">
+            Sensibilidade:
+            <select id="ropeSensitivitySelect" style="background: #080f20; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 4px; padding: 3px 6px; font-size: 0.75rem; margin-left: 4px;">
+              <option value="normal" selected>Normal (Bolso Bermuda)</option>
+              <option value="high">Alta (Segurando na Mão)</option>
+              <option value="fast">Rápida (Corda Veloz / Double Under)</option>
+            </select>
+          </div>
+          <button type="button" class="btn btn-outline" style="font-size: 0.7rem; padding: 4px 10px;" onclick="simulateRopeJump()">
+            +1 Pulo (Teste)
+          </button>
+        </div>
+
+        <!-- Rope Action Controls -->
+        <div style="display: flex; gap: 8px; margin-bottom: 18px;">
+          <button class="btn btn-primary btn-full" id="btnRopeStart" style="padding: 14px; font-size: 1rem; background: linear-gradient(135deg, #2563eb, #3b82f6);" onclick="startJumpRope()">
+            ▶ Iniciar Treino de Corda 🪢
+          </button>
+          <button class="btn btn-outline" id="btnRopePause" style="display: none; padding: 12px 16px;" onclick="pauseJumpRope()">
+            ⏸ Pausar
+          </button>
+          <button class="btn btn-primary" id="btnRopeResume" style="display: none; padding: 12px 16px;" onclick="resumeJumpRope()">
+            ▶ Continuar
+          </button>
+          <button class="btn btn-orange" id="btnRopeFinish" style="display: none; padding: 12px 16px;" onclick="finishJumpRope()">
+            🏁 Finalizar & Pontuar
+          </button>
+          <button class="btn btn-danger" id="btnRopeCancel" style="display: none; padding: 12px;" title="Cancelar" onclick="cancelJumpRope()">
+            ✕
+          </button>
+        </div>
+
+      </div>
+
+      <!-- VIEW C: REGISTRO MANUAL (ESTEIRA / INDOOR) -->
       <div id="runManualView" style="display: none;">
         <div class="card">
           <div class="card-title">Registrar Corrida de Hoje (Esteira / Indoor)</div>
           
           <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 14px; font-size: 0.75rem; color: #fca5a5; line-height: 1.4;">
-            🛡️ <strong>Regra Oficial Anti-Fraude:</strong> Registros manuais de esteira servem para anotação pessoal de quilometragem e <strong>NÃO somam pontos de Nível</strong>. Apenas corridas ao vivo rastreadas pelo nosso <strong>GPS</strong> oficial somam pontos de evolução!
+            🛡️ <strong>Regra Oficial Anti-Fraude:</strong> Registros manuais de esteira servem para anotação pessoal de quilometragem e <strong>NÃO somam pontos de Nível</strong>. Apenas treinos ao vivo rastreados pelo nosso <strong>GPS</strong> (Corrida/Bike) ou pelo <strong>Sensor de Pular Corda</strong> oficial somam pontos de evolução!
+          </div>
           </div>
 
           <form id="runForm" onsubmit="handleSaveRun(event)">
@@ -499,7 +589,7 @@
       </button>
       <button class="nav-btn" onclick="switchTab('running')" id="nav-running">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2"></circle><path d="m15 22-3-7-3 3-3-4"></path><path d="m18 13-3-3 1-3-4-2-2 3"></path></svg>
-        <span>Corrida</span>
+        <span>Cardio</span>
       </button>
       <button class="nav-btn" onclick="switchTab('levels')" id="nav-levels">
         <svg viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>
@@ -1030,11 +1120,11 @@
     </div>
   </div>
 
-  <!-- MODAL: ALTERAR TEMPO DA CORRIDA -->
+  <!-- MODAL: ALTERAR TEMPO DA CORRIDA / CARDIO -->
   <div class="modal-backdrop" id="editRunModal">
     <div class="modal-box" style="max-width: 400px;">
       <div class="modal-header">
-        <h3>✏️ Alterar Tempo da Corrida</h3>
+        <h3>✏️ Alterar Tempo da Atividade</h3>
         <button class="btn-icon" onclick="closeEditRunModal()">✕</button>
       </div>
       <form id="editRunForm" onsubmit="handleSaveEditRun(event)">
