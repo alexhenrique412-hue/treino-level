@@ -531,44 +531,36 @@
         <button class="btn-icon" onclick="closeExerciseModal()">✕</button>
       </div>
 
-      <!-- SELETOR DE EXERCÍCIOS PARA NOVATOS -->
-      <div style="background: rgba(0, 210, 255, 0.08); border: 1px solid rgba(0, 210, 255, 0.28); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 14px;">
+      <!-- SELETOR VISUAL DE APARELHOS & EXERCÍCIOS PARA NOVATOS -->
+      <div style="background: rgba(0, 210, 255, 0.08); border: 1.5px solid rgba(0, 210, 255, 0.35); border-radius: var(--radius-sm); padding: 12px; margin-bottom: 14px;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-          <label style="font-size: 0.78rem; font-weight: 700; color: #00d2ff; margin-bottom: 0;">
-            💡 Escolha da Lista de Exercícios (Novatos):
+          <label style="font-size: 0.82rem; font-weight: 800; color: #00d2ff; margin-bottom: 0;">
+            📖 Catálogo de Aparelhos & Exercícios
           </label>
-        </div>
-        <div style="font-size: 0.7rem; color: var(--text-muted); margin-bottom: 8px;">
-          Toque em qualquer exercício para preencher automaticamente as séries, repetições e dicas ideais!
+          <span style="font-size: 0.65rem; color: var(--text-muted);">Toque para preencher</span>
         </div>
 
-        <div class="form-row" style="margin-bottom: 6px;">
-          <div class="form-group" style="margin-bottom: 0;">
-            <select id="exerciseMuscleFilter" onchange="filterExercisesByMuscle(this.value)" style="font-size: 0.8rem; padding: 8px 10px;">
-              <option value="all">⚡ Todos os Músculos</option>
-              <option value="peito">🦾 Peito</option>
-              <option value="costas">🦅 Costas</option>
-              <option value="pernas">🦵 Pernas (Quadríceps)</option>
-              <option value="posterior">🍑 Posterior & Glúteos</option>
-              <option value="ombros">⚡ Ombros</option>
-              <option value="biceps">💪 Bíceps & Antebraço</option>
-              <option value="triceps">🥊 Tríceps</option>
-              <option value="panturrilha">👟 Panturrilha</option>
-              <option value="trapezio">🔺 Trapézio</option>
-              <option value="abdomen">🛡️ Abdômen & Core</option>
-            </select>
-          </div>
-          <div class="form-group" style="margin-bottom: 0;">
-            <select id="exerciseCatalogSelect" onchange="selectCatalogExercise(this.value)" style="font-size: 0.8rem; padding: 8px 10px;">
-              <option value="">👇 Selecione um exercício...</option>
-              <!-- Preenchido via JS -->
-            </select>
-          </div>
+        <!-- Barra de busca rápida por nome de aparelho/exercício -->
+        <input type="text" id="catalogSearchInput" placeholder="🔍 Digite ou busque o aparelho (ex: leg, supino)..." oninput="handleCatalogSearch(this.value)" style="padding: 8px 12px; font-size: 0.82rem; margin-bottom: 8px; width: 100%;">
+
+        <!-- Filtros de Músculos por Chips/Botões com Rolagem Horizontal -->
+        <div id="exerciseMuscleFilterChips" style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 8px; -webkit-overflow-scrolling: touch;">
+          <button type="button" class="quick-chip-btn active" onclick="filterExercisesByMuscle('all', this)">⚡ Todos</button>
+          <button type="button" class="quick-chip-btn" onclick="filterExercisesByMuscle('peito', this)">🦾 Peito</button>
+          <button type="button" class="quick-chip-btn" onclick="filterExercisesByMuscle('costas', this)">🦅 Costas</button>
+          <button type="button" class="quick-chip-btn" onclick="filterExercisesByMuscle('pernas', this)">🦵 Pernas</button>
+          <button type="button" class="quick-chip-btn" onclick="filterExercisesByMuscle('posterior', this)">🍑 Posterior/Glúteos</button>
+          <button type="button" class="quick-chip-btn" onclick="filterExercisesByMuscle('ombros', this)">⚡ Ombros</button>
+          <button type="button" class="quick-chip-btn" onclick="filterExercisesByMuscle('biceps', this)">💪 Bíceps</button>
+          <button type="button" class="quick-chip-btn" onclick="filterExercisesByMuscle('triceps', this)">🥊 Tríceps</button>
+          <button type="button" class="quick-chip-btn" onclick="filterExercisesByMuscle('panturrilha', this)">👟 Panturrilha</button>
+          <button type="button" class="quick-chip-btn" onclick="filterExercisesByMuscle('trapezio', this)">🔺 Trapézio</button>
+          <button type="button" class="quick-chip-btn" onclick="filterExercisesByMuscle('abdomen', this)">🛡️ Abdômen</button>
         </div>
 
-        <!-- Chips de Atalhos Rápidos -->
-        <div id="exerciseQuickChips" style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px;">
-          <!-- Preenchido via JS com os mais populares do músculo selecionado -->
+        <!-- Lista Visual com os Cards dos Exercícios/Aparelhos -->
+        <div id="exerciseCatalogCards" style="max-height: 160px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 2px;">
+          <!-- Preenchido via JS com botões clicáveis de cada exercício -->
         </div>
       </div>
 

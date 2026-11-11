@@ -1511,11 +1511,34 @@ input, select, textarea {
   transition: all 0.15s ease;
 }
 
-.quick-chip-btn:hover, .quick-chip-btn:active {
-  background: rgba(0, 210, 255, 0.22);
+.quick-chip-btn.active {
+  background: #00d2ff !important;
+  color: #02050e !important;
+  border-color: #00d2ff !important;
+  font-weight: 800 !important;
+}
+
+/* Catalog Exercise Cards */
+.catalog-exercise-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.catalog-exercise-card:hover, .catalog-exercise-card:active {
+  background: rgba(0, 210, 255, 0.18);
   border-color: #00d2ff;
-  color: #00d2ff;
   transform: translateY(-1px);
+}
+
+select option {
+  background-color: #080f20 !important;
+  color: #f1f5f9 !important;
+  padding: 8px !important;
 }
 
 .template-plan-card {

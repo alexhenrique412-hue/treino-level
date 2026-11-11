@@ -1462,39 +1462,75 @@ const WORKOUT_TEMPLATES = {
   })
 };
 
-function populateExerciseCatalogSelect(muscleFilter = "all") {
-  const select = document.getElementById("exerciseCatalogSelect");
+let currentSelectedMuscle = "all";
+let currentSearchTerm = "";
+
+function populateExerciseCatalogCards() {
+  const container = document.getElementById("exerciseCatalogCards");
   const datalist = document.getElementById("exerciseDatalist");
-  const chipsContainer = document.getElementById("exerciseQuickChips");
-  if (!select) return;
+  if (!container) return;
 
-  const filtered = (muscleFilter === "all")
-    ? EXERCISE_CATALOG
-    : EXERCISE_CATALOG.filter(ex => ex.muscle === muscleFilter);
+  const term = (currentSearchTerm || "").toLowerCase().trim();
+  const filtered = EXERCISE_CATALOG.filter(ex => {
+    const matchesMuscle = (currentSelectedMuscle === "all" || ex.muscle === currentSelectedMuscle);
+    const matchesSearch = !term || ex.name.toLowerCase().includes(term) || (ex.notes && ex.notes.toLowerCase().includes(term));
+    return matchesMuscle && matchesSearch;
+  });
 
-  // 1. Preenche dropdown
-  select.innerHTML = '<option value="">👇 Toque para escolher da lista...</option>' + 
-    filtered.map(ex => `<option value="${ex.name}">${ex.name} (${ex.sets}x ${ex.reps})</option>`).join('');
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; color: var(--text-muted); font-size: 0.75rem; padding: 12px 0;">
+        Nenhum aparelho encontrado com "${term}".<br>
+        Você pode digitar o nome que quiser no campo abaixo!
+      </div>
+    `;
+  } else {
+    const muscleEmojis = {
+      peito: "🦾", costas: "🦅", pernas: "🦵", posterior: "🍑",
+      ombros: "⚡", biceps: "💪", triceps: "🥊", panturrilha: "👟",
+      trapezio: "🔺", abdomen: "🛡️"
+    };
 
-  // 2. Preenche Datalist de sugestões
+    container.innerHTML = filtered.map(ex => {
+      const emoji = muscleEmojis[ex.muscle] || "🏋️";
+      return `
+        <div class="catalog-exercise-card" onclick="selectCatalogExercise('${ex.name.replace(/'/g, "\\'")}')">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
+            <strong style="color: #fff; font-size: 0.82rem;">${emoji} ${ex.name}</strong>
+            <span style="font-size: 0.65rem; color: #00d2ff; background: rgba(0,210,255,0.14); padding: 2px 6px; border-radius: 4px; font-weight: 700; white-space: nowrap;">
+              ${ex.sets}x ${ex.reps}
+            </span>
+          </div>
+          <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">
+            ${ex.notes}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Preenche Datalist de sugestões para o teclado do celular
   if (datalist) {
     datalist.innerHTML = EXERCISE_CATALOG.map(ex => `<option value="${ex.name}">`).join('');
   }
-
-  // 3. Preenche Chips rápidos de clique direto
-  if (chipsContainer) {
-    const chipsToShow = filtered.slice(0, 6);
-    chipsContainer.innerHTML = chipsToShow.map(ex => `
-      <button type="button" class="quick-chip-btn" onclick="selectCatalogExercise('${ex.name.replace(/'/g, "\\'")}')">
-        + ${ex.name.split(' ')[0]} ${ex.name.split(' ')[1] || ''}
-      </button>
-    `).join('');
-  }
 }
 
-function filterExercisesByMuscle(muscleGroup) {
+function handleCatalogSearch(term) {
+  currentSearchTerm = term;
+  populateExerciseCatalogCards();
+}
+
+function filterExercisesByMuscle(muscleGroup, btnElement) {
   triggerHaptic('light');
-  populateExerciseCatalogSelect(muscleGroup);
+  currentSelectedMuscle = muscleGroup;
+
+  if (btnElement && btnElement.parentElement) {
+    const buttons = btnElement.parentElement.querySelectorAll('.quick-chip-btn');
+    buttons.forEach(b => b.classList.remove('active'));
+    btnElement.classList.add('active');
+  }
+
+  populateExerciseCatalogCards();
 }
 
 function selectCatalogExercise(exName) {
@@ -1509,6 +1545,18 @@ function selectCatalogExercise(exName) {
   document.getElementById("exerciseRestInput").value = ex.rest;
   document.getElementById("exerciseNotesInput").value = ex.notes;
 
+  // Destaque visual no card selecionado
+  const cards = document.querySelectorAll(".catalog-exercise-card");
+  cards.forEach(c => {
+    if (c.innerText.includes(ex.name)) {
+      c.style.borderColor = "var(--accent-green)";
+      c.style.background = "rgba(0, 210, 255, 0.22)";
+    } else {
+      c.style.borderColor = "";
+      c.style.background = "";
+    }
+  });
+
   const tipBox = document.getElementById("exerciseExecutionTipBox");
   if (tipBox) {
     tipBox.style.display = "block";
@@ -1522,9 +1570,21 @@ function openAddExerciseModal() {
   document.getElementById("exerciseId").value = "";
   document.getElementById("exerciseForm").reset();
 
-  const muscleFilter = document.getElementById("exerciseMuscleFilter");
-  if (muscleFilter) muscleFilter.value = "all";
-  populateExerciseCatalogSelect("all");
+  currentSelectedMuscle = "all";
+  currentSearchTerm = "";
+  const searchInput = document.getElementById("catalogSearchInput");
+  if (searchInput) searchInput.value = "";
+
+  const chipsContainer = document.getElementById("exerciseMuscleFilterChips");
+  if (chipsContainer) {
+    const buttons = chipsContainer.querySelectorAll('.quick-chip-btn');
+    buttons.forEach((b, idx) => {
+      if (idx === 0) b.classList.add('active');
+      else b.classList.remove('active');
+    });
+  }
+
+  populateExerciseCatalogCards();
 
   const tipBox = document.getElementById("exerciseExecutionTipBox");
   if (tipBox) {
@@ -1537,8 +1597,9 @@ function openAddExerciseModal() {
 
 function openEditExerciseModal(exId) {
   triggerHaptic('light');
-  const dayRoutine = STATE.routines[STATE.activeDayIndex];
-  const ex = dayRoutine.exercises.find(e => e.id === exId);
+  const currentDay = (typeof STATE.activeDayIndex === 'number') ? STATE.activeDayIndex : 0;
+  const routine = (STATE.routines && STATE.routines[currentDay]) ? STATE.routines[currentDay] : DEFAULT_WORKOUT_ROUTINES[0];
+  const ex = (routine.exercises || []).find(e => e.id === exId);
   if (!ex) return;
 
   document.getElementById("exerciseModalTitle").innerText = "Editar Exercício";
@@ -1550,7 +1611,7 @@ function openEditExerciseModal(exId) {
   document.getElementById("exerciseRestInput").value = ex.rest || 60;
   document.getElementById("exerciseNotesInput").value = ex.notes || "";
 
-  populateExerciseCatalogSelect("all");
+  populateExerciseCatalogCards();
 
   const tipBox = document.getElementById("exerciseExecutionTipBox");
   if (tipBox) {
@@ -1571,57 +1632,82 @@ function closeExerciseModal() {
 }
 
 function openWorkoutTemplatesModal() {
-  triggerHaptic('light');
-  const currentDay = STATE.activeDayIndex;
-  const routine = STATE.routines[currentDay];
-  
-  const dailyTitleEl = document.getElementById("templateDailyTitle");
-  const dailyDescEl = document.getElementById("templateDailyDesc");
-  if (dailyTitleEl) {
-    dailyTitleEl.innerText = `⚡ Treino Oficial de Hoje (${routine.dayName}: ${routine.title})`;
-  }
-  if (dailyDescEl) {
-    dailyDescEl.innerText = `Carrega a ficha oficial balanceada de ${routine.title} com 5 a 6 exercícios e cargas sugeridas.`;
-  }
+  try {
+    triggerHaptic('light');
+    const currentDay = (typeof STATE.activeDayIndex === 'number' && STATE.activeDayIndex >= 0) ? STATE.activeDayIndex : 0;
+    if (!STATE.routines) STATE.routines = JSON.parse(JSON.stringify(DEFAULT_WORKOUT_ROUTINES));
+    if (!STATE.routines[currentDay]) {
+      STATE.routines[currentDay] = JSON.parse(JSON.stringify(DEFAULT_WORKOUT_ROUTINES[currentDay] || DEFAULT_WORKOUT_ROUTINES[0]));
+    }
+    const routine = STATE.routines[currentDay];
+    
+    const dailyTitleEl = document.getElementById("templateDailyTitle");
+    const dailyDescEl = document.getElementById("templateDailyDesc");
+    if (dailyTitleEl && routine) {
+      dailyTitleEl.innerText = `⚡ Treino Oficial de Hoje (${routine.dayName || 'Hoje'}: ${routine.title || 'Treino'})`;
+    }
+    if (dailyDescEl && routine) {
+      dailyDescEl.innerText = `Carrega a ficha oficial balanceada de ${routine.title || 'Treino'} com exercícios e cargas sugeridas.`;
+    }
 
-  document.getElementById("workoutTemplatesModal").classList.add("open");
+    const modal = document.getElementById("workoutTemplatesModal");
+    if (modal) {
+      modal.classList.add("open");
+    } else {
+      console.error("Modal workoutTemplatesModal não encontrado no DOM!");
+    }
+  } catch (err) {
+    console.error("Erro em openWorkoutTemplatesModal:", err);
+    const modal = document.getElementById("workoutTemplatesModal");
+    if (modal) modal.classList.add("open");
+  }
 }
 
 function closeWorkoutTemplatesModal() {
   triggerHaptic('light');
-  document.getElementById("workoutTemplatesModal").classList.remove("open");
+  const modal = document.getElementById("workoutTemplatesModal");
+  if (modal) modal.classList.remove("open");
 }
 
 function loadWorkoutTemplate(templateType) {
-  triggerHaptic('success');
-  const currentDay = STATE.activeDayIndex;
-  const routine = STATE.routines[currentDay];
+  try {
+    triggerHaptic('success');
+    const currentDay = (typeof STATE.activeDayIndex === 'number') ? STATE.activeDayIndex : 0;
+    if (!STATE.routines) STATE.routines = JSON.parse(JSON.stringify(DEFAULT_WORKOUT_ROUTINES));
+    if (!STATE.routines[currentDay]) {
+      STATE.routines[currentDay] = JSON.parse(JSON.stringify(DEFAULT_WORKOUT_ROUTINES[currentDay] || DEFAULT_WORKOUT_ROUTINES[0]));
+    }
+    const routine = STATE.routines[currentDay];
 
-  if (templateType === 'clear') {
-    if (!confirm(`Deseja realmente limpar todos os exercícios de ${routine.dayName}?`)) return;
-    routine.exercises = [];
+    if (templateType === 'clear') {
+      if (!confirm(`Deseja realmente limpar todos os exercícios de ${routine.dayName || 'hoje'}?`)) return;
+      routine.exercises = [];
+      saveState();
+      closeWorkoutTemplatesModal();
+      renderWorkoutTab();
+      return;
+    }
+
+    const templateFn = WORKOUT_TEMPLATES[templateType];
+    if (!templateFn) return;
+
+    const result = templateFn();
+    if (!confirm(`Deseja carregar a planilha "${result.title}" para ${routine.dayName || 'hoje'}?\n\n(A ficha deste dia será preenchida com os exercícios recomendados).`)) {
+      return;
+    }
+
+    routine.title = result.title;
+    routine.exercises = result.exercises;
+
     saveState();
     closeWorkoutTemplatesModal();
     renderWorkoutTab();
-    return;
+    sfx.playLevelUp();
+    alert(`✓ Planilha "${result.title}" montada com sucesso para ${routine.dayName || 'hoje'}! Bora treinar! 💪`);
+  } catch (err) {
+    console.error("Erro ao carregar template:", err);
+    alert("Erro ao carregar planilha. Tente novamente.");
   }
-
-  const templateFn = WORKOUT_TEMPLATES[templateType];
-  if (!templateFn) return;
-
-  const result = templateFn();
-  if (!confirm(`Deseja carregar a planilha "${result.title}" para ${routine.dayName}?\n\n(A ficha deste dia será preenchida com os exercícios recomendados).`)) {
-    return;
-  }
-
-  routine.title = result.title;
-  routine.exercises = result.exercises;
-
-  saveState();
-  closeWorkoutTemplatesModal();
-  renderWorkoutTab();
-  sfx.playLevelUp();
-  alert(`✓ Planilha "${result.title}" montada com sucesso para ${routine.dayName}! Bora treinar! 💪`);
 }
 
 function handleSaveExercise(e) {
@@ -2248,17 +2334,36 @@ function renderWorkoutTab() {
     </button>
   `).join('');
 
-  const routine = STATE.routines[STATE.activeDayIndex];
-  document.getElementById("workoutDayLabel").innerText = routine.dayName;
-  document.getElementById("workoutDayTitle").innerText = routine.title;
-  document.getElementById("exerciseCountBadge").innerText = routine.exercises.length;
+  const currentDay = (typeof STATE.activeDayIndex === 'number' && STATE.activeDayIndex >= 0) ? STATE.activeDayIndex : 0;
+  if (!STATE.routines) STATE.routines = JSON.parse(JSON.stringify(DEFAULT_WORKOUT_ROUTINES));
+  if (!STATE.routines[currentDay]) {
+    STATE.routines[currentDay] = JSON.parse(JSON.stringify(DEFAULT_WORKOUT_ROUTINES[currentDay] || DEFAULT_WORKOUT_ROUTINES[0]));
+  }
+  const routine = STATE.routines[currentDay];
+
+  const labelEl = document.getElementById("workoutDayLabel");
+  const titleEl = document.getElementById("workoutDayTitle");
+  const countEl = document.getElementById("exerciseCountBadge");
+
+  if (labelEl) labelEl.innerText = routine.dayName || "Hoje";
+  if (titleEl) titleEl.innerText = routine.title || "Treino";
+  if (countEl) countEl.innerText = (routine.exercises || []).length;
 
   const container = document.getElementById("exerciseListContainer");
-  if (routine.exercises.length === 0) {
+  if (!routine.exercises || routine.exercises.length === 0) {
     container.innerHTML = `
-      <div style="text-align: center; padding: 24px; color: var(--text-muted); font-size: 0.85rem;">
+      <div style="text-align: center; padding: 24px 12px; color: var(--text-muted); font-size: 0.85rem; background: rgba(255,255,255,0.02); border-radius: var(--radius-sm); border: 1px dashed var(--border-color);">
+        <div style="font-size: 1.5rem; margin-bottom: 6px;">📋</div>
         Nenhum exercício montado para este dia ainda.<br>
-        Clique em <strong>+ Adicionar Exercício</strong> para começar sua ficha!
+        <span style="font-size: 0.75rem; color: var(--text-dark);">Escolha uma opção abaixo para começar:</span>
+        <div style="display: flex; gap: 8px; justify-content: center; margin-top: 14px; flex-wrap: wrap;">
+          <button type="button" class="btn btn-outline" style="padding: 8px 14px; font-size: 0.78rem; color: #38bdf8; border-color: rgba(56,189,248,0.5);" onclick="openWorkoutTemplatesModal()">
+            📋 Carregar Ficha Pronta
+          </button>
+          <button type="button" class="btn btn-primary" style="padding: 8px 14px; font-size: 0.78rem;" onclick="openAddExerciseModal()">
+            + Adicionar Exercício
+          </button>
+        </div>
       </div>
     `;
     return;
@@ -2906,6 +3011,7 @@ window.addEventListener("DOMContentLoaded", () => {
   checkDateTurnover();
   checkStandaloneMode();
   STATE.activeDayIndex = getCurrentDayOfWeekIndex();
+  populateExerciseCatalogCards();
   renderAll();
   startAutoUpdateEngine();
 });
