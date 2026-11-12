@@ -1958,6 +1958,163 @@ function claimDailyChallenge() {
   }
 }
 
+// --- MISSÃO SURPRESA DA SEMANA (SOLO LEVELING STYLE) ---
+function renderSurpriseMissionCard() {
+  const section = document.getElementById("surpriseMissionSection");
+  if (!section) return;
+
+  const today = getTodayDateStr();
+  if (!STATE.surpriseMission) {
+    section.style.display = "none";
+    return;
+  }
+
+  const isToday = STATE.surpriseMission.assignedDate === today;
+  if (isToday) {
+    section.style.display = "block";
+    document.getElementById("surpriseMissionTitle").innerText = STATE.surpriseMission.title;
+    document.getElementById("surpriseMissionDesc").innerText = STATE.surpriseMission.desc;
+
+    const todayTotalMin = STATE.todaySessions.reduce((acc, s) => acc + s.durationMin, 0);
+    const target = STATE.surpriseMission.targetMinutes;
+    const pct = Math.min(100, Math.round((todayTotalMin / target) * 100));
+
+    document.getElementById("surpriseProgressBar").style.width = `${pct}%`;
+    document.getElementById("surpriseProgressText").innerText = `${todayTotalMin} / ${target} min concluídos`;
+
+    const statusBadge = document.getElementById("surpriseStatusBadge");
+    const btn = document.getElementById("btnClaimSurpriseMission");
+
+    if (STATE.surpriseMission.completed || todayTotalMin >= target) {
+      if (!STATE.surpriseMission.completed) {
+        STATE.surpriseMission.completed = true;
+        saveState();
+      }
+      statusBadge.innerText = "MISSÃO CUMPRIDA! 🛡️";
+      statusBadge.style.color = "var(--accent-green)";
+      btn.disabled = true;
+      btn.innerText = "✅ Salvo da Penalidade!";
+      btn.style.background = "var(--accent-green)";
+      btn.style.borderColor = "var(--accent-green)";
+      btn.style.color = "#000";
+    } else {
+      statusBadge.innerText = "MISSÃO SURPRESA ATIVA";
+      statusBadge.style.color = "#fca5a5";
+      btn.disabled = false;
+      btn.innerText = "🛡️ Concluir Missão";
+      btn.style.background = "linear-gradient(135deg, #ef4444, #b91c1c)";
+      btn.style.borderColor = "#f87171";
+      btn.style.color = "#fff";
+    }
+  } else {
+    section.style.display = "none";
+  }
+}
+
+function claimSurpriseMission() {
+  const todayTotalMin = STATE.todaySessions.reduce((acc, s) => acc + s.durationMin, 0);
+  const target = STATE.surpriseMission ? STATE.surpriseMission.targetMinutes : 45;
+
+  if (todayTotalMin >= target) {
+    STATE.surpriseMission.completed = true;
+    saveState();
+    triggerHaptic('success');
+    sfx.playLevelUp();
+    alert("🛡️ MISSÃO SURPRESA CONCLUÍDA!\nVocê atingiu os minutos necessários, evitou a penalidade de -1 ponto e manteve sua posição no Ranking!");
+    renderHomeTab();
+  } else {
+    triggerHaptic('warning');
+    alert(`Ainda faltam ${target - todayTotalMin} minutos de treino para bater a missão surpresa e se salvar da penalidade de -1 ponto! Bora treinar! 💪`);
+  }
+}
+
+function triggerSurpriseMissionModal() {
+  if (!STATE.surpriseMission) return;
+  sfx.playLevelUp();
+  triggerHaptic('heavy');
+  document.getElementById("modalSurpriseTitle").innerText = STATE.surpriseMission.title;
+  document.getElementById("modalSurpriseMin").innerText = STATE.surpriseMission.targetMinutes;
+  document.getElementById("surpriseMissionModal").classList.add("open");
+}
+
+function closeSurpriseMissionModal() {
+  document.getElementById("surpriseMissionModal").classList.remove("open");
+}
+
+function triggerPenaltyModal(mission) {
+  triggerHaptic('heavy');
+  document.getElementById("penaltyModal").classList.add("open");
+}
+
+function closePenaltyModal() {
+  document.getElementById("penaltyModal").classList.remove("open");
+  renderAll();
+}
+
+function triggerSeasonResetModal(pastYear, levelObj) {
+  triggerHaptic('success');
+  sfx.playLevelUp();
+  const nextYear = new Date().getFullYear();
+  document.getElementById("seasonResetTitle").innerText = `BEM-VINDO A ${nextYear}!`;
+  const summaryEl = document.getElementById("seasonArchiveSummary");
+  if (summaryEl) {
+    const pointsSaved = STATE.seasonHistory && STATE.seasonHistory[0] ? STATE.seasonHistory[0].points.toFixed(1) : '0.0';
+    summaryEl.innerHTML = `
+      <strong>🏆 Registro da Temporada ${pastYear}:</strong><br>
+      Você encerrou o ano anterior com <strong>${levelObj.rankTier || 'E'} • ${levelObj.name}</strong> (${pointsSaved} pts).<br>
+      Seus pontos foram zerados para a nova temporada anual. Boa sorte na busca pelo Rank SS Supremo deste ano!
+    `;
+  }
+  document.getElementById("seasonResetModal").classList.add("open");
+}
+
+function closeSeasonResetModal() {
+  document.getElementById("seasonResetModal").classList.remove("open");
+  renderAll();
+}
+
+// --- PWA FORCED REFRESH & UPDATE (SEM PRECISAR DESINSTALAR) ---
+async function forceAppUpdate(manual = false) {
+  triggerHaptic('medium');
+  if (manual) {
+    const btn = document.getElementById("btnForceUpdateApp");
+    if (btn) {
+      btn.style.transition = "transform 0.8s ease";
+      btn.style.transform = "rotate(360deg)";
+    }
+  }
+
+  try {
+    // 1. Limpa todos os caches
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+
+    // 2. Aciona atualização do Service Worker
+    if ('serviceWorker' in navigator) {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg) {
+        await reg.update();
+        if (reg.waiting) {
+          reg.waiting.postMessage({ action: 'skipWaiting' });
+        }
+      }
+    }
+
+    localStorage.setItem('ironlevel_cache_ver', 'ironlevel-v16');
+
+    if (manual) {
+      alert("⚡ App atualizado com sucesso para a versão mais recente! Carregando as novidades...");
+    }
+    const cleanUrl = window.location.href.split('#')[0].split('?')[0];
+    window.location.replace(cleanUrl + '?v=' + Date.now());
+  } catch (err) {
+    console.error("Erro na atualização forçada:", err);
+    window.location.reload();
+  }
+}
+
 // --- WORKOUT BUILDER & EXERCISE MANAGEMENT ---
 function setWorkoutDay(dayIndex) {
   STATE.activeDayIndex = dayIndex;
@@ -2923,6 +3080,9 @@ function renderHomeTab() {
   const hToNext = Math.floor(minsToNextPt / 60);
   const mToNext = minsToNextPt % 60;
   document.getElementById("hoursToNextPt").innerText = `${hToNext}h ${String(mToNext).padStart(2, '0')}m`;
+
+  // Alerta de Missão Surpresa Semanal
+  renderSurpriseMissionCard();
 
   // Daily Challenge Card
   document.getElementById("challengeTitle").innerText = STATE.dailyChallenge.title;
