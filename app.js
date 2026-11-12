@@ -358,13 +358,18 @@ function getDatesOfCurrentWeek() {
   return weekDates;
 }
 
-// Sorteia e cria a Missão Surpresa em 1 dia aleatório da semana
+// Sorteia e cria a Missão Surpresa em 1 dia aleatório da semana (de HOJE até Domingo)
 function generateWeeklySurpriseMission() {
   const currentWeek = getWeekId();
   const weekDates = getDatesOfCurrentWeek();
-  // Sorteia um dos 7 dias da semana (0 = Seg, ..., 6 = Dom)
-  const randDayIdx = Math.floor(Math.random() * 7);
-  const targetDate = weekDates[randDayIdx];
+  const today = getTodayDateStr();
+
+  // Sorteia apenas entre datas de HOJE até Domingo para não gerar missão no passado!
+  const validDates = weekDates.filter(d => d >= today);
+  const targetDate = validDates.length > 0 
+    ? validDates[Math.floor(Math.random() * validDates.length)] 
+    : today;
+  const randDayIdx = weekDates.indexOf(targetDate);
 
   const SURPRISE_QUEST_POOL = [
     { title: "Treino de Emergência: 45 min hoje!", targetMinutes: 45, desc: "Alerta de Sobrevivência! O sistema exige 45 minutos de treino pesado hoje para manter seu Rank." },
@@ -393,16 +398,15 @@ function checkSurpriseMissionStatus() {
   const currentWeek = getWeekId();
   const today = getTodayDateStr();
 
-  // Se não tem missão sorteada para a semana atual, sorteia agora
+  // Se não tem missão sorteada ou é de outra semana, sorteia para os dias restantes
   if (!STATE.surpriseMission || STATE.surpriseMission.weekId !== currentWeek) {
     generateWeeklySurpriseMission();
   }
 
-  // Se o dia da missão já passou e NÃO foi completada -> PENALIDADE DE -1 PONTO!
+  // Se a missão era de um dia anterior desta mesma semana e não foi concluída
   if (STATE.surpriseMission && STATE.surpriseMission.assignedDate < today) {
     if (!STATE.surpriseMission.completed && !STATE.surpriseMission.penaltyApplied) {
       STATE.surpriseMission.penaltyApplied = true;
-      // 2 horas = 1 ponto (deduz 120 minutos = 1.0 pt)
       const penaltyMinutes = 120;
       STATE.totalMinutes = Math.max(0, STATE.totalMinutes - penaltyMinutes);
       STATE.totalPoints = calculatePoints(STATE.totalMinutes);
@@ -3002,32 +3006,44 @@ function launchConfetti() {
 
 // --- TAB SWITCHING ---
 function switchTab(tabId) {
-  sfx.init();
+  try { sfx.init(); } catch (e) {}
+  try { triggerHaptic('light'); } catch (e) {}
+
   const tabs = ['home', 'workout', 'running', 'levels', 'share'];
   tabs.forEach(t => {
     const el = document.getElementById(`tab-${t}`);
     const navBtn = document.getElementById(`nav-${t}`);
-    if (el) el.classList.remove('active');
+    if (el) {
+      el.classList.remove('active');
+      el.style.display = 'none';
+    }
     if (navBtn) navBtn.classList.remove('active');
   });
 
   const activeEl = document.getElementById(`tab-${tabId}`);
   const activeNav = document.getElementById(`nav-${tabId}`);
-  if (activeEl) activeEl.classList.add('active');
+  if (activeEl) {
+    activeEl.classList.add('active');
+    activeEl.style.display = 'block';
+  }
   if (activeNav) activeNav.classList.add('active');
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
 
-  if (tabId === 'home') renderHomeTab();
-  if (tabId === 'workout') renderWorkoutTab();
-  if (tabId === 'running') {
-    renderRunningTab();
-    if (currentRunSubtab === 'gps') {
-      setTimeout(initRunMapIfNeeded, 150);
+  try {
+    if (tabId === 'home') renderHomeTab();
+    if (tabId === 'workout') renderWorkoutTab();
+    if (tabId === 'running') {
+      renderRunningTab();
+      if (typeof currentRunSubtab !== 'undefined' && currentRunSubtab === 'gps') {
+        setTimeout(initRunMapIfNeeded, 150);
+      }
     }
+    if (tabId === 'levels') renderLevelsTab();
+    if (tabId === 'share') renderShareTab();
+  } catch (err) {
+    console.error(`Erro ao renderizar aba ${tabId}:`, err);
   }
-  if (tabId === 'levels') renderLevelsTab();
-  if (tabId === 'share') renderShareTab();
 }
 
 // --- RENDER FUNCTIONS ---

@@ -1781,13 +1781,67 @@ button, .btn, .card, .session-item, .segmented-btn, .nav-btn,
 
 #leaderboardList, #runningHistoryList, #exerciseListContainer {
   contain: content;
-  will-change: transform;
 }
 
-.app-container {
-  transform: translateZ(0);
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
+/* ========================================================
+   BOTTOM NAVIGATION BAR FIX (Sempre visível no celular)
+======================================================== */
+.bottom-nav {
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: 100% !important;
+  max-width: 480px !important;
+  background: rgba(18, 24, 36, 0.98) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border-top: 1px solid var(--border-color) !important;
+  display: flex !important;
+  justify-content: space-around !important;
+  padding: 8px 4px !important;
+  padding-bottom: max(10px, env(safe-area-inset-bottom, 0px)) !important;
+  z-index: 9999 !important;
+  pointer-events: auto !important;
+}
+
+.bottom-nav .nav-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 6px 2px;
+  transition: all 0.2s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.bottom-nav .nav-btn svg {
+  width: 22px;
+  height: 22px;
+  stroke: var(--text-muted);
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: all 0.2s ease;
+}
+
+.bottom-nav .nav-btn.active {
+  color: var(--accent-green) !important;
+}
+
+.bottom-nav .nav-btn.active svg {
+  stroke: var(--accent-green) !important;
+  filter: drop-shadow(0 0 6px var(--accent-green-glow));
 }
 
 /* ========================================================
