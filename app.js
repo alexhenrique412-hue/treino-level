@@ -3095,17 +3095,182 @@ function renderHomeTab() {
   }
 }
 
+// --- WORKOUT SUBTABS: ROUTINE vs MUSCLE GUIDE ---
+let currentWorkoutSubtab = 'routine';
+let currentGuideMuscle = 'all';
+
+function switchWorkoutSubtab(subtab) {
+  try { sfx.init(); } catch (e) {}
+  try { triggerHaptic('light'); } catch (e) {}
+  currentWorkoutSubtab = subtab;
+
+  const btnRoutine = document.getElementById("btnSubWorkoutRoutine");
+  const btnGuide = document.getElementById("btnSubWorkoutGuide");
+  const viewRoutine = document.getElementById("viewWorkoutRoutine");
+  const viewGuide = document.getElementById("viewWorkoutGuide");
+
+  if (btnRoutine) btnRoutine.classList.toggle("active", subtab === 'routine');
+  if (btnGuide) btnGuide.classList.toggle("active", subtab === 'guide');
+
+  if (viewRoutine) viewRoutine.style.display = (subtab === 'routine') ? 'block' : 'none';
+  if (viewGuide) viewGuide.style.display = (subtab === 'guide') ? 'block' : 'none';
+
+  if (subtab === 'routine') {
+    renderWorkoutRoutineView();
+  } else {
+    renderWorkoutGuideView();
+  }
+}
+
+// --- DETECT MUSCLE FOR EXERCISE ---
+function detectMuscleForExercise(name, notes) {
+  const str = ((name || '') + ' ' + (notes || '')).toLowerCase();
+  if (str.match(/supino|crucifixo|peito|peitoral|flex[ãa]o|crossover|voador|peck deck/)) return 'peito';
+  if (str.match(/puxada|remada|barra fixa|pulldown|costas|dorsal|lombar|serrote/)) return 'costas';
+  if (str.match(/agachamento|leg press|extensora|hack|afundo|passada|quadr[íi]ceps/)) return 'pernas';
+  if (str.match(/flexora|stiff|posterior|isquiotibiais|pelvica|p[ée]lvica|gl[úu]teo|abdutora|adutora/)) return 'posterior';
+  if (str.match(/desenvolvimento|lateral|frontal|ombro|deltoide|face pull|manguito/)) return 'ombros';
+  if (str.match(/rosca|b[íi]ceps|antebra[çc]o|martelo|scott/)) return 'biceps';
+  if (str.match(/tr[íi]ceps|franc[êe]s|corda|testa|mergulho|coice/)) return 'triceps';
+  if (str.match(/abdominal|prancha|infra|supra|obl[íi]quo|abd[ôo]men/)) return 'abdomen';
+  if (str.match(/panturrilha|g[êe]meos|s[óo]leo/)) return 'panturrilha';
+  if (str.match(/trap[ée]zio|encolhimento/)) return 'trapezio';
+  return 'peito';
+}
+
+function getMuscleTargetName(muscleKey) {
+  const map = {
+    peito: 'Peitoral (Maior & Superior)',
+    costas: 'Dorsais & Costas',
+    trapezio: 'Trapézio Superior',
+    ombros: 'Deltoides (Ombros)',
+    biceps: 'Bíceps Braquial',
+    triceps: 'Tríceps (3 Cabeças)',
+    pernas: 'Quadríceps (Coxas)',
+    posterior: 'Posterior de Coxa & Glúteos',
+    abdomen: 'Reto Abdominal & Core',
+    panturrilha: 'Panturrilhas (Gêmeos)'
+  };
+  return map[muscleKey] || 'Músculo Alvo';
+}
+
+// --- SVG ANATOMICAL THUMBNAIL RENDERER (COMO NA FOTO DO HEVY / APP) ---
+function renderMuscleThumbnailSvg(muscle) {
+  const m = (muscle || 'peito').toLowerCase();
+  const isBack = ['costas', 'triceps', 'posterior', 'trapezio', 'panturrilha'].includes(m);
+  const red = '#ef4444';
+  const body = '#64748b';
+  const glow = 'drop-shadow(0 0 3px rgba(239,68,68,0.85))';
+
+  if (!isBack) {
+    // VISÃO ANTERIOR (FRENTE)
+    const isPec = m === 'peito';
+    const isDelt = m === 'ombros';
+    const isBic = m === 'biceps';
+    const isAbs = m === 'abdomen';
+    const isQuad = m === 'pernas';
+
+    return `
+      <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="8" r="4.5" fill="${body}"/>
+        <rect x="30" y="12.5" width="4" height="3" rx="1" fill="${body}"/>
+        <path d="M19 16 C17 17 16 21 18 24 C19 23 21 20 22 17 Z" fill="${isDelt ? red : body}" style="${isDelt ? `filter:${glow};` : ''}"/>
+        <path d="M45 16 C47 17 48 21 46 24 C45 23 43 20 42 17 Z" fill="${isDelt ? red : body}" style="${isDelt ? `filter:${glow};` : ''}"/>
+        <path d="M23 16.5 C27 16.5 31 17.5 31 23 C26 24 22 23 22 18.5 Z" fill="${isPec ? red : body}" style="${isPec ? `filter:${glow};` : ''}"/>
+        <path d="M41 16.5 C37 16.5 33 17.5 33 23 C38 24 42 23 42 18.5 Z" fill="${isPec ? red : body}" style="${isPec ? `filter:${glow};` : ''}"/>
+        <path d="M17 24 C15 26 16 30 18 32 C19 30 20 27 19 24 Z" fill="${isBic ? red : body}" style="${isBic ? `filter:${glow};` : ''}"/>
+        <path d="M47 24 C49 26 48 30 46 32 C45 30 44 27 45 24 Z" fill="${isBic ? red : body}" style="${isBic ? `filter:${glow};` : ''}"/>
+        <path d="M18 32 L15 39 C15 40 16 40 17 39 L19 33 Z" fill="${body}"/>
+        <path d="M46 32 L49 39 C49 40 48 40 47 39 L45 33 Z" fill="${body}"/>
+        <g fill="${isAbs ? red : body}" style="${isAbs ? `filter:${glow};` : ''}">
+          <rect x="28" y="24" width="3.5" height="3" rx="0.5"/>
+          <rect x="32.5" y="24" width="3.5" height="3" rx="0.5"/>
+          <rect x="28" y="28" width="3.5" height="3" rx="0.5"/>
+          <rect x="32.5" y="28" width="3.5" height="3" rx="0.5"/>
+          <rect x="28.5" y="32" width="3" height="3" rx="0.5"/>
+          <rect x="32.5" y="32" width="3" height="3" rx="0.5"/>
+        </g>
+        <path d="M26 36 L38 36 L37 39 L27 39 Z" fill="${body}"/>
+        <path d="M25 39 C23 43 24 50 28 51 C30 47 31 43 31 39 Z" fill="${isQuad ? red : body}" style="${isQuad ? `filter:${glow};` : ''}"/>
+        <path d="M39 39 C41 43 40 50 36 51 C34 47 33 43 33 39 Z" fill="${isQuad ? red : body}" style="${isQuad ? `filter:${glow};` : ''}"/>
+        <path d="M26 52 L30 52 L29 61 L27 61 Z" fill="${body}"/>
+        <path d="M38 52 L34 52 L35 61 L37 61 Z" fill="${body}"/>
+      </svg>
+    `;
+  } else {
+    // VISÃO POSTERIOR (COSTAS)
+    const isBackMuscles = m === 'costas' || m === 'trapezio';
+    const isTri = m === 'triceps';
+    const isHam = m === 'posterior';
+    const isCalf = m === 'panturrilha';
+
+    return `
+      <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="8" r="4.5" fill="${body}"/>
+        <path d="M25 14 L39 14 L41 19 L32 23 L23 19 Z" fill="${isBackMuscles ? red : body}" style="${isBackMuscles ? `filter:${glow};` : ''}"/>
+        <path d="M23 19 C26 22 29 23 29 32 C25 30 22 26 22 20 Z" fill="${isBackMuscles ? red : body}" style="${isBackMuscles ? `filter:${glow};` : ''}"/>
+        <path d="M41 19 C38 22 35 23 35 32 C39 30 42 26 42 20 Z" fill="${isBackMuscles ? red : body}" style="${isBackMuscles ? `filter:${glow};` : ''}"/>
+        <path d="M18 20 C16 23 16 28 18 31 C19 28 20 24 19 20 Z" fill="${isTri ? red : body}" style="${isTri ? `filter:${glow};` : ''}"/>
+        <path d="M46 20 C48 23 48 28 46 31 C45 28 44 24 45 20 Z" fill="${isTri ? red : body}" style="${isTri ? `filter:${glow};` : ''}"/>
+        <path d="M17 31 L15 39 C15 40 16 40 17 39 L19 32 Z" fill="${body}"/>
+        <path d="M47 31 L49 39 C49 40 48 40 47 39 L45 32 Z" fill="${body}"/>
+        <path d="M24 34 C23 39 31 39 31 34 Z" fill="${isHam ? red : body}" style="${isHam ? `filter:${glow};` : ''}"/>
+        <path d="M40 34 C41 39 33 39 33 34 Z" fill="${isHam ? red : body}" style="${isHam ? `filter:${glow};` : ''}"/>
+        <path d="M25 39 C23 43 24 50 28 51 C30 47 31 43 31 39 Z" fill="${isHam ? red : body}" style="${isHam ? `filter:${glow};` : ''}"/>
+        <path d="M39 39 C41 43 40 50 36 51 C34 47 33 43 33 39 Z" fill="${isHam ? red : body}" style="${isHam ? `filter:${glow};` : ''}"/>
+        <path d="M25 52 C23 55 24 59 28 60 C29 58 30 55 29 52 Z" fill="${isCalf ? red : body}" style="${isCalf ? `filter:${glow};` : ''}"/>
+        <path d="M39 52 C41 55 40 59 36 60 C35 58 34 55 35 52 Z" fill="${isCalf ? red : body}" style="${isCalf ? `filter:${glow};` : ''}"/>
+      </svg>
+    `;
+  }
+}
+
+// --- RENDER WORKOUT TAB ---
 function renderWorkoutTab() {
-  const daysBar = document.getElementById("daysBar");
-  const dayNamesShort = ["SEG", "TER", "QUA", "QUI", "SEX", "SÁB", "DOM"];
+  if (currentWorkoutSubtab === 'guide') {
+    renderWorkoutGuideView();
+  } else {
+    renderWorkoutRoutineView();
+  }
+}
 
-  daysBar.innerHTML = dayNamesShort.map((short, idx) => `
-    <button class="day-btn ${idx === STATE.activeDayIndex ? 'active' : ''}" onclick="setWorkoutDay(${idx})">
-      <span class="day-short">${short}</span>
-      <span class="day-dot"></span>
-    </button>
-  `).join('');
+// Alternar Bi-Set em um exercício
+function toggleExerciseBiSet(id) {
+  triggerHaptic('light');
+  const currentDay = (typeof STATE.activeDayIndex === 'number' && STATE.activeDayIndex >= 0) ? STATE.activeDayIndex : 0;
+  const routine = STATE.routines[currentDay];
+  if (!routine || !routine.exercises) return;
+  const ex = routine.exercises.find(e => e.id === id);
+  if (ex) {
+    ex.isBiSet = !ex.isBiSet;
+    saveState();
+    renderWorkoutRoutineView();
+  }
+}
 
+// Adicionar nova divisão (ex: Treino D, E, F...)
+function addNewWorkoutDivision() {
+  triggerHaptic('medium');
+  const letters = ["A", "B", "C", "D", "E", "F", "G", "H", "I"];
+  const totalRoutines = Object.keys(STATE.routines || {}).length;
+  const nextLetter = letters[totalRoutines] || `Divisão ${totalRoutines + 1}`;
+
+  const title = prompt(`Nome da nova divisão (ex: Treino ${nextLetter} - Foco Bíceps):`, `Treino ${nextLetter}`);
+  if (title && title.trim()) {
+    const newIdx = totalRoutines;
+    STATE.routines[newIdx] = {
+      dayName: `Divisão ${nextLetter}`,
+      title: title.trim(),
+      exercises: []
+    };
+    STATE.activeDayIndex = newIdx;
+    saveState();
+    renderWorkoutRoutineView();
+  }
+}
+
+// VIEW 1: RENDERIZA O TREINO DO DIA (ESTILO DA FOTO)
+function renderWorkoutRoutineView() {
   const currentDay = (typeof STATE.activeDayIndex === 'number' && STATE.activeDayIndex >= 0) ? STATE.activeDayIndex : 0;
   if (!STATE.routines) STATE.routines = JSON.parse(JSON.stringify(DEFAULT_WORKOUT_ROUTINES));
   if (!STATE.routines[currentDay]) {
@@ -3113,24 +3278,59 @@ function renderWorkoutTab() {
   }
   const routine = STATE.routines[currentDay];
 
+  // 1. Division Pills Bar: A, B, C, D, E... [+ Divisão] como na foto
+  const pillsBar = document.getElementById("divisionPillsBar");
+  if (pillsBar) {
+    const letters = ["A", "B", "C", "D", "E", "F", "G"];
+    const routineKeys = Object.keys(STATE.routines).map(k => parseInt(k)).sort((a,b) => a - b);
+    
+    let htmlPills = routineKeys.map((idx) => {
+      const letter = letters[idx] || (idx + 1);
+      const isActive = (idx === STATE.activeDayIndex);
+      return `
+        <button class="division-pill ${isActive ? 'active' : ''}" onclick="setWorkoutDay(${idx})" title="${STATE.routines[idx].title || ''}">
+          ${letter}
+        </button>
+      `;
+    }).join('');
+
+    htmlPills += `
+      <button class="division-pill btn-add-div" onclick="addNewWorkoutDivision()" title="Criar nova divisão">
+        + Divisão
+      </button>
+    `;
+    pillsBar.innerHTML = htmlPills;
+  }
+
+  // 2. Header & Meta info
   const labelEl = document.getElementById("workoutDayLabel");
   const titleEl = document.getElementById("workoutDayTitle");
   const countEl = document.getElementById("exerciseCountBadge");
+  const exCountText = document.getElementById("workoutExCountText");
+  const estTimeText = document.getElementById("workoutEstimatedTimeText");
 
-  if (labelEl) labelEl.innerText = routine.dayName || "Hoje";
-  if (titleEl) titleEl.innerText = routine.title || "Treino";
-  if (countEl) countEl.innerText = (routine.exercises || []).length;
+  const exList = routine.exercises || [];
+  const estMinutes = Math.max(20, Math.round(exList.length * 9));
 
+  if (labelEl) labelEl.innerText = routine.dayName || "Divisão";
+  if (titleEl) titleEl.innerText = routine.title || "Meu Treino";
+  if (countEl) countEl.innerText = exList.length;
+  if (exCountText) exCountText.innerText = `${exList.length} exercícios`;
+  if (estTimeText) estTimeText.innerText = `~${estMinutes} min`;
+
+  // 3. Exercise Cards com visual da foto (thumbnail anatômica, dots, bi-set)
   const container = document.getElementById("exerciseListContainer");
-  if (!routine.exercises || routine.exercises.length === 0) {
+  if (!container) return;
+
+  if (exList.length === 0) {
     container.innerHTML = `
-      <div style="text-align: center; padding: 24px 12px; color: var(--text-muted); font-size: 0.85rem; background: rgba(255,255,255,0.02); border-radius: var(--radius-sm); border: 1px dashed var(--border-color);">
-        <div style="font-size: 1.5rem; margin-bottom: 6px;">📋</div>
-        Nenhum exercício montado para este dia ainda.<br>
-        <span style="font-size: 0.75rem; color: var(--text-dark);">Escolha uma opção abaixo para começar:</span>
+      <div style="text-align: center; padding: 26px 12px; color: var(--text-muted); font-size: 0.85rem; background: rgba(255,255,255,0.02); border-radius: var(--radius-sm); border: 1px dashed var(--border-color); margin-top: 10px;">
+        <div style="font-size: 1.8rem; margin-bottom: 6px;">📋</div>
+        Nenhum exercício montado nesta divisão ainda.<br>
+        <span style="font-size: 0.75rem; color: var(--text-dark);">Escolha uma opção para começar:</span>
         <div style="display: flex; gap: 8px; justify-content: center; margin-top: 14px; flex-wrap: wrap;">
-          <button type="button" class="btn btn-outline" style="padding: 8px 14px; font-size: 0.78rem; color: #38bdf8; border-color: rgba(56,189,248,0.5);" onclick="openWorkoutTemplatesModal()">
-            📋 Carregar Ficha Pronta
+          <button type="button" class="btn btn-outline" style="padding: 8px 14px; font-size: 0.78rem; color: #38bdf8; border-color: rgba(56,189,248,0.5);" onclick="switchWorkoutSubtab('guide')">
+            🧬 Abrir Guia de Músculos
           </button>
           <button type="button" class="btn btn-primary" style="padding: 8px 14px; font-size: 0.78rem;" onclick="openAddExerciseModal()">
             + Adicionar Exercício
@@ -3141,28 +3341,234 @@ function renderWorkoutTab() {
     return;
   }
 
-  container.innerHTML = routine.exercises.map(ex => `
-    <div class="exercise-item ${ex.done ? 'done' : ''}">
-      <div class="exercise-left">
-        <div class="exercise-checkbox ${ex.done ? 'checked' : ''}" onclick="toggleExerciseDone('${ex.id}')">
-          ${ex.done ? '✓' : ''}
+  container.innerHTML = exList.map(ex => {
+    const muscle = ex.muscle || detectMuscleForExercise(ex.name, ex.notes);
+    const targetLabel = getMuscleTargetName(muscle);
+    const svgThumb = renderMuscleThumbnailSvg(muscle);
+    const isBiset = !!ex.isBiSet;
+
+    return `
+      <div class="exercise-card-pro ${isBiset ? 'is-biset' : ''} ${ex.done ? 'done' : ''}">
+        <div class="drag-handle-dots" title="Ordem do exercício">:::</div>
+        
+        <!-- Thumbnail da Anatomia com Músculo Alvo em Destaque Vermelho -->
+        <div class="exercise-thumb-box" title="Foco Anatômico: ${targetLabel}">
+          ${svgThumb}
         </div>
-        <div>
-          <div class="exercise-name">${ex.name}</div>
-          <div class="exercise-details">
-            <strong>${ex.sets} séries</strong> × <strong>${ex.reps} reps</strong>
-            ${ex.weight > 0 ? ` • Carga: <strong style="color: var(--accent-orange);">${ex.weight} kg</strong>` : ''}
-            ${ex.rest ? ` • Descanso: ${ex.rest}s` : ''}
-            ${ex.notes ? `<div style="font-size: 0.68rem; color: var(--text-dark); margin-top: 1px;">💡 ${ex.notes}</div>` : ''}
+
+        <div class="exercise-info-pro">
+          <div class="exercise-title-pro">
+            ${ex.name}
+            ${isBiset ? '<span class="badge-biset-tag">BI-SET</span>' : ''}
+          </div>
+          <div class="exercise-meta-pro">
+            <strong>${ex.sets}</strong> × <strong>${ex.reps}</strong> · <strong>${ex.rest || 60}s</strong> ${ex.weight > 0 ? `· <strong>${ex.weight} kg</strong>` : ''}
+          </div>
+          <div class="muscle-target-badge">
+            🎯 ${targetLabel}
+          </div>
+          ${ex.notes ? `<div style="font-size: 0.68rem; color: #94a3b8; margin-top: 3px;">💡 ${ex.notes}</div>` : ''}
+        </div>
+
+        <div class="exercise-actions-pro">
+          <button class="action-check-btn ${ex.done ? 'checked' : ''}" onclick="toggleExerciseDone('${ex.id}')" title="Marcar concluído">
+            ${ex.done ? '✓' : ''}
+          </button>
+          <div style="display: flex; gap: 4px; margin-top: 2px;">
+            <button class="btn-icon" style="width: 24px; height: 24px; font-size: 0.65rem;" onclick="toggleExerciseBiSet('${ex.id}')" title="Alternar Bi-Set">⚡</button>
+            <button class="btn-icon" style="width: 24px; height: 24px; font-size: 0.65rem;" onclick="openEditExerciseModal('${ex.id}')" title="Editar">✏️</button>
+            <button class="btn-icon" style="width: 24px; height: 24px; font-size: 0.65rem;" onclick="deleteExercise('${ex.id}')" title="Excluir">🗑️</button>
           </div>
         </div>
       </div>
-      <div class="exercise-actions">
-        <button class="btn-icon" title="Editar" onclick="openEditExerciseModal('${ex.id}')">✏️</button>
-        <button class="btn-icon" title="Excluir" onclick="deleteExercise('${ex.id}')">🗑️</button>
+    `;
+  }).join('');
+}
+
+// VIEW 2: GUIA DE MÚSCULOS & EXERCÍCIOS
+function filterGuideMuscle(muscleKey) {
+  triggerHaptic('light');
+  currentGuideMuscle = muscleKey;
+  renderWorkoutGuideView();
+}
+
+function addExerciseFromGuide(catalogIdx) {
+  triggerHaptic('success');
+  const exTemplate = EXERCISE_CATALOG[catalogIdx];
+  if (!exTemplate) return;
+
+  const currentDay = (typeof STATE.activeDayIndex === 'number' && STATE.activeDayIndex >= 0) ? STATE.activeDayIndex : 0;
+  if (!STATE.routines) STATE.routines = JSON.parse(JSON.stringify(DEFAULT_WORKOUT_ROUTINES));
+  if (!STATE.routines[currentDay]) {
+    STATE.routines[currentDay] = { dayName: "Treino", title: "Meu Treino", exercises: [] };
+  }
+
+  const newExercise = {
+    id: "ex_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4),
+    name: exTemplate.name,
+    muscle: exTemplate.muscle,
+    sets: exTemplate.sets || 4,
+    reps: exTemplate.reps || "10-12",
+    weight: exTemplate.weight || 0,
+    rest: exTemplate.rest || 60,
+    notes: exTemplate.notes || "",
+    isBiSet: false,
+    done: false
+  };
+
+  STATE.routines[currentDay].exercises.push(newExercise);
+  saveState();
+
+  alert(`✔ "${exTemplate.name}" adicionado à sua ficha do dia!`);
+}
+
+function renderWorkoutGuideView() {
+  // 1. Muscle Filter Bar
+  const filterBar = document.getElementById("muscleFilterBar");
+  const muscles = [
+    { key: "all", label: "Todos", icon: "⚡" },
+    { key: "peito", label: "Peito", icon: "🔴" },
+    { key: "costas", label: "Costas", icon: "🔴" },
+    { key: "ombros", label: "Ombros", icon: "🔴" },
+    { key: "biceps", label: "Bíceps", icon: "🔴" },
+    { key: "triceps", label: "Tríceps", icon: "🔴" },
+    { key: "pernas", label: "Quadríceps", icon: "🔴" },
+    { key: "posterior", label: "Posterior/Glúteos", icon: "🔴" },
+    { key: "abdomen", label: "Abdômen", icon: "🔴" },
+    { key: "panturrilha", label: "Panturrilhas", icon: "🔴" }
+  ];
+
+  if (filterBar) {
+    filterBar.innerHTML = muscles.map(m => `
+      <button class="muscle-filter-btn ${currentGuideMuscle === m.key ? 'active' : ''}" onclick="filterGuideMuscle('${m.key}')">
+        <span>${m.icon}</span> ${m.label}
+      </button>
+    `).join('');
+  }
+
+  // 2. Muscle Detail Card (Anatomia e Biomecânica)
+  const detailCard = document.getElementById("muscleDetailCard");
+  if (detailCard) {
+    const detailMap = {
+      all: {
+        title: "Mapa Muscular Completo",
+        primary: "Todos os grupos musculares principais",
+        synergist: "Ativação global do corpo",
+        tip: "Selecione um grupo muscular nos botões acima para ver exatamente a anatomia e os exercícios ideais para hipertrofia."
+      },
+      peito: {
+        title: "Peitoral Maior & Clavicular (Superior)",
+        primary: "Peitoral Maior (fibras superiores, médias e inferiores)",
+        synergist: "Deltoide Anterior e Tríceps Braquial",
+        tip: "Foque na aproximação dos cotovelos no final da contração (adução do braço) para ativar 100% das fibras do peito."
+      },
+      costas: {
+        title: "Grande Dorsal, Trapézio & Romboides",
+        primary: "Grande Dorsal (abertura das asas) e Trapézio Médio/Inferior",
+        synergist: "Bíceps Braquial, Braquial e Antebraços",
+        tip: "Puxe direcionando o movimento com os cotovelos e estufe bem o peito para não roubar carga com os braços."
+      },
+      ombros: {
+        title: "Deltoides (Anterior, Lateral e Posterior)",
+        primary: "Deltoide Lateral (largura de ombro) e Anterior",
+        synergist: "Trapézio Superior e Tríceps",
+        tip: "Na elevação lateral, mantenha os cotovelos levemente flexionados e incline o halter como se estivesse vertendo um copo d'água."
+      },
+      biceps: {
+        title: "Bíceps Braquial & Braquiorradial",
+        primary: "Bíceps (Cabeça Longa e Curta) e Braquial Anterior",
+        synergist: "Flexores do Antebraço",
+        tip: "Mantenha os cotovelos travados na linha do tronco e faça a rotação máxima do punho para fora (supinação) no topo."
+      },
+      triceps: {
+        title: "Tríceps Braquial (3 Cabeças)",
+        primary: "Cabeça Lateral, Longa e Medial do Tríceps (ocupa 60% do braço)",
+        synergist: "Peitoral Maior e Deltoides",
+        tip: "Estenda completamente os cotovelos e aperte por 1 segundo na contração máxima de cada repetição."
+      },
+      pernas: {
+        title: "Quadríceps (Vasto Lateral, Medial e Reto Femoral)",
+        primary: "Quadríceps da coxa",
+        synergist: "Glúteo Máximo, Adutores e Panturrilhas",
+        tip: "Agache descendo abaixo de 90 graus controlando o peso sem deixar os joelhos entrarem para dentro (valgo dinâmico)."
+      },
+      posterior: {
+        title: "Isquiotibiais & Glúteo Máximo",
+        primary: "Bíceps Femoral, Semitendíneo e Glúteo",
+        synergist: "Lombar e Adutores",
+        tip: "No stiff e na flexora, mantenha a coluna totalmente travada e empurre o quadril para trás sentindo o alongamento do músculo."
+      },
+      abdomen: {
+        title: "Reto Abdominal & Core",
+        primary: "Reto do Abdômen (Supra e Infra) e Oblíquos",
+        synergist: "Transverso do Abdômen e Quadrado Lombar",
+        tip: "Solte todo o ar na subida do movimento para contrair a musculatura profunda do abdômen ao máximo."
+      },
+      panturrilha: {
+        title: "Gastrocnêmio & Sóleo",
+        primary: "Gastrocnêmio (cabeça medial e lateral) e Sóleo",
+        synergist: "Tendão de Aquiles e Músculos dos Pés",
+        tip: "Alongue ao máximo o calcanhar na descida (pausa de 1s) e suba na ponta extrema dos dedos para recrutar todas as fibras."
+      }
+    };
+
+    const info = detailMap[currentGuideMuscle] || detailMap.all;
+    detailCard.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+        <h4 style="font-size: 0.95rem; font-weight: 800; color: #fff; margin: 0;">${info.title}</h4>
+        <span style="font-size: 0.65rem; background: rgba(239,68,68,0.2); color: #f87171; padding: 2px 6px; border-radius: 4px; font-weight: 700; border: 1px solid rgba(239,68,68,0.4);">
+          🔴 Foco Alvo
+        </span>
       </div>
-    </div>
-  `).join('');
+      <div style="font-size: 0.74rem; color: #cbd5e1; margin-bottom: 4px;">
+        <strong>🎯 Músculo Primário:</strong> ${info.primary}
+      </div>
+      <div style="font-size: 0.74rem; color: #cbd5e1; margin-bottom: 6px;">
+        <strong>⚡ Sinergistas (Apoio):</strong> ${info.synergist}
+      </div>
+      <div style="font-size: 0.72rem; color: #fde047; background: rgba(245, 158, 11, 0.1); border-left: 3px solid #f59e0b; padding: 6px 8px; border-radius: 0 6px 6px 0;">
+        💡 <strong>Dica do Treinador:</strong> ${info.tip}
+      </div>
+    `;
+  }
+
+  // 3. Exercise Catalog Grid
+  const listContainer = document.getElementById("guideExerciseList");
+  if (!listContainer) return;
+
+  const filtered = EXERCISE_CATALOG.filter(ex => {
+    if (currentGuideMuscle === 'all') return true;
+    if (currentGuideMuscle === 'posterior') return ex.muscle === 'posterior';
+    return ex.muscle === currentGuideMuscle;
+  });
+
+  listContainer.innerHTML = filtered.map((ex, idx) => {
+    const originalIdx = EXERCISE_CATALOG.indexOf(ex);
+    const muscle = ex.muscle || detectMuscleForExercise(ex.name, ex.notes);
+    const targetLabel = getMuscleTargetName(muscle);
+    const svgThumb = renderMuscleThumbnailSvg(muscle);
+
+    return `
+      <div class="guide-card-pro">
+        <div class="exercise-thumb-box" title="Foco Anatômico: ${targetLabel}">
+          ${svgThumb}
+        </div>
+        <div style="flex: 1; min-width: 0;">
+          <div style="font-size: 0.9rem; font-weight: 800; color: #fff; margin-bottom: 2px;">${ex.name}</div>
+          <div style="font-size: 0.72rem; color: #cbd5e1;">
+            Séries: <strong>${ex.sets}</strong> × <strong>${ex.reps}</strong> · Descanso: <strong>${ex.rest || 60}s</strong>
+          </div>
+          <div class="muscle-target-badge" style="margin-top: 3px;">
+            🎯 ${targetLabel}
+          </div>
+          ${ex.notes ? `<div style="font-size: 0.68rem; color: #94a3b8; margin-top: 3px;">💡 ${ex.notes}</div>` : ''}
+        </div>
+        <button class="btn btn-primary" style="padding: 6px 10px; font-size: 0.7rem; flex-shrink: 0;" onclick="addExerciseFromGuide(${originalIdx})" title="Adicionar à ficha de hoje">
+          + Adicionar
+        </button>
+      </div>
+    `;
+  }).join('');
 }
 
 function renderRunningTab() {
