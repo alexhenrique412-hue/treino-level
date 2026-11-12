@@ -37,9 +37,6 @@
         <button class="btn btn-outline" id="headerInstallBtn" style="padding: 4px 8px; font-size: 0.72rem; border-color: var(--accent-green); color: var(--accent-green); display: flex; align-items: center; gap: 4px;" onclick="openInstallModal()">
           <span>📲</span> Instalar
         </button>
-        <button class="btn-icon" id="btnForceUpdateApp" style="border-radius: 50%; width: 34px; height: 34px; font-size: 0.92rem;" title="Atualizar aplicativo para a versão mais recente sem desinstalar" onclick="forceAppUpdate(true)">
-          🔄
-        </button>
         <button class="btn-icon" style="border-radius: 50%; width: 34px; height: 34px; font-size: 0.95rem;" title="Mudar Cores / Temas do App" onclick="openThemeModal()">
           🎨
         </button>
@@ -52,11 +49,6 @@
         </div>
       </div>
     </header>
-
-    <!-- PWA Auto-Update Banner (Avisa quando houver novidade sem desinstalar) -->
-    <div id="appUpdateBanner" class="app-update-banner" style="display: none;" onclick="forceAppUpdate(true)">
-      <span>⚡ Nova versão pronta! Toque aqui para atualizar sem desinstalar o app.</span>
-    </div>
 
     <!-- TAB 1: INÍCIO (DASHBOARD & NÍVEL) -->
     <main id="tab-home" class="tab-content active">
@@ -1248,35 +1240,8 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').then((reg) => {
-          // Checagem imediata de nova versão ao carregar
-          reg.update();
-
-          // Monitora se um novo SW está pronto
-          reg.addEventListener('updatefound', () => {
-            const newWorker = reg.installing;
-            if (newWorker) {
-              newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  const banner = document.getElementById("appUpdateBanner");
-                  if (banner) banner.style.display = "block";
-                }
-              });
-            }
-          });
-
-          // Checa atualizações a cada 2 minutos
-          setInterval(() => {
-            reg.update();
-          }, 2 * 60 * 1000);
-        }).catch((err) => {
+        navigator.serviceWorker.register('./sw.js').catch((err) => {
           console.log('SW registration error:', err);
-        });
-
-        // Recarrega sem desinstalar quando o novo SW assumir o controle
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-          console.log('[PWA] Nova versão assumiu o controle. Recarregando...');
-          window.location.reload();
         });
       });
     }

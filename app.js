@@ -2077,48 +2077,6 @@ function closeSeasonResetModal() {
   renderAll();
 }
 
-// --- PWA FORCED REFRESH & UPDATE (SEM PRECISAR DESINSTALAR) ---
-async function forceAppUpdate(manual = false) {
-  triggerHaptic('medium');
-  if (manual) {
-    const btn = document.getElementById("btnForceUpdateApp");
-    if (btn) {
-      btn.style.transition = "transform 0.8s ease";
-      btn.style.transform = "rotate(360deg)";
-    }
-  }
-
-  try {
-    // 1. Limpa todos os caches
-    if ('caches' in window) {
-      const keys = await caches.keys();
-      await Promise.all(keys.map(k => caches.delete(k)));
-    }
-
-    // 2. Aciona atualização do Service Worker
-    if ('serviceWorker' in navigator) {
-      const reg = await navigator.serviceWorker.getRegistration();
-      if (reg) {
-        await reg.update();
-        if (reg.waiting) {
-          reg.waiting.postMessage({ action: 'skipWaiting' });
-        }
-      }
-    }
-
-    localStorage.setItem('ironlevel_cache_ver', 'ironlevel-v16');
-
-    if (manual) {
-      alert("⚡ App atualizado com sucesso para a versão mais recente! Carregando as novidades...");
-    }
-    const cleanUrl = window.location.href.split('#')[0].split('?')[0];
-    window.location.replace(cleanUrl + '?v=' + Date.now());
-  } catch (err) {
-    console.error("Erro na atualização forçada:", err);
-    window.location.reload();
-  }
-}
-
 // --- WORKOUT BUILDER & EXERCISE MANAGEMENT ---
 function setWorkoutDay(dayIndex) {
   STATE.activeDayIndex = dayIndex;
@@ -2705,17 +2663,6 @@ async function runAutoOptimizationAndCheck() {
             const keys = await caches.keys();
             await Promise.all(keys.filter(k => k !== remoteVersion).map(k => caches.delete(k)));
           }
-
-          // Só recarrega se o usuário NÃO estiver cronometrando treino ou gravando GPS
-          const isGpsActive = (typeof isGpsTracking !== 'undefined') && isGpsTracking;
-          const isStopwatchActive = (typeof stopwatchInterval !== 'undefined') && (stopwatchInterval !== null);
-
-          if (!isGpsActive && !isStopwatchActive) {
-            console.log('[Auto-Update] Aplicando versão atualizada automaticamente...');
-            const cleanUrl = window.location.href.split('#')[0].split('?')[0];
-            window.location.replace(cleanUrl + '?v=' + Date.now());
-            return;
-          }
         }
       }
     }
@@ -2747,19 +2694,6 @@ function startAutoUpdateEngine() {
       }
     }
   });
-}
-
-async function forceUpdateAndClearCache() {
-  try {
-    if ('caches' in window) {
-      const cacheNames = await caches.keys();
-      await Promise.all(cacheNames.map(name => caches.delete(name)));
-    }
-    const baseUrl = window.location.href.split('#')[0].split('?')[0];
-    window.location.replace(baseUrl + '?t=' + Date.now());
-  } catch (err) {
-    window.location.reload();
-  }
 }
 
 // --- THEME PICKER & LIVE PREVIEW ---
