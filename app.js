@@ -254,7 +254,15 @@ const STATE = {
   runningHistory: [],
   
   // Badges:
-  badges: BADGES
+  badges: BADGES,
+
+  // Season / Reset Anual (Zera nível e pontos a cada virada de ano):
+  currentSeasonYear: new Date().getFullYear(),
+  seasonHistory: [], // [{ year, points, level, rankTier, rankName, date }]
+
+  // Missão Surpresa Semanal (Ocorre em 1 dia aleatório da semana com penalidade de -1 ponto se falhar):
+  surpriseMission: null, // { weekId, assignedDate, dayIndex, title, targetMinutes, desc, completed, penaltyApplied, alertSeen }
+  penaltyHistory: []
 };
 
 // --- STORAGE SYSTEM ---
@@ -277,6 +285,10 @@ function loadState() {
       STATE.dailyChallenge = parsed.dailyChallenge || STATE.dailyChallenge;
       STATE.routines = parsed.routines || DEFAULT_WORKOUT_ROUTINES;
       STATE.runningHistory = parsed.runningHistory || [];
+      STATE.currentSeasonYear = parsed.currentSeasonYear || new Date().getFullYear();
+      STATE.seasonHistory = parsed.seasonHistory || [];
+      STATE.surpriseMission = parsed.surpriseMission || null;
+      STATE.penaltyHistory = parsed.penaltyHistory || [];
       if (parsed.badges) {
         STATE.badges.forEach(b => {
           const found = parsed.badges.find(pb => pb.id === b.id);
@@ -318,8 +330,153 @@ function getCurrentDayOfWeekIndex() {
   return jsDay === 0 ? 6 : jsDay - 1;
 }
 
+// Retorna identificador único da semana no formato "YYYY-WXX"
+function getWeekId(d = new Date()) {
+  const date = new Date(d.getTime());
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
+  const week1 = new Date(date.getFullYear(), 0, 4);
+  const weekNum = 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+  return `${date.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+}
+
+// Retorna as 7 datas (YYYY-MM-DD) de Segunda a Domingo da semana atual
+function getDatesOfCurrentWeek() {
+  const now = new Date();
+  const dayOfWeek = (now.getDay() + 6) % 7; // 0 = Seg ... 6 = Dom
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - dayOfWeek);
+  const weekDates = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    weekDates.push(`${y}-${m}-${day}`);
+  }
+  return weekDates;
+}
+
+// Sorteia e cria a Missão Surpresa em 1 dia aleatório da semana
+function generateWeeklySurpriseMission() {
+  const currentWeek = getWeekId();
+  const weekDates = getDatesOfCurrentWeek();
+  // Sorteia um dos 7 dias da semana (0 = Seg, ..., 6 = Dom)
+  const randDayIdx = Math.floor(Math.random() * 7);
+  const targetDate = weekDates[randDayIdx];
+
+  const SURPRISE_QUEST_POOL = [
+    { title: "Treino de Emergência: 45 min hoje!", targetMinutes: 45, desc: "Alerta de Sobrevivência! O sistema exige 45 minutos de treino pesado hoje para manter seu Rank." },
+    { title: "Provação Relâmpago: 40 min sem desculpas!", targetMinutes: 40, desc: "Dia surpresa ativado! Complete pelo menos 40 minutos de treino ou cardio hoje." },
+    { title: "Desafio de Honra: 50 min de esforço!", targetMinutes: 50, desc: "A arena dos heróis clama por esforço! Treine 50 minutos hoje para não sofrer penalidade." },
+    { title: "Alerta Crítico: 35 min de ferro ou corrida!", targetMinutes: 35, desc: "Missão obrigatória da semana! Complete 35 minutos hoje antes da meia-noite." }
+  ];
+  const q = SURPRISE_QUEST_POOL[Math.floor(Math.random() * SURPRISE_QUEST_POOL.length)];
+
+  STATE.surpriseMission = {
+    weekId: currentWeek,
+    assignedDate: targetDate,
+    dayIndex: randDayIdx,
+    title: q.title,
+    targetMinutes: q.targetMinutes,
+    desc: q.desc,
+    completed: false,
+    penaltyApplied: false,
+    alertSeen: false
+  };
+  saveState();
+}
+
+// Verifica status da Missão Surpresa e aplica penalidade de -1 Ponto se falhou
+function checkSurpriseMissionStatus() {
+  const currentWeek = getWeekId();
+  const today = getTodayDateStr();
+
+  // Se não tem missão sorteada para a semana atual, sorteia agora
+  if (!STATE.surpriseMission || STATE.surpriseMission.weekId !== currentWeek) {
+    generateWeeklySurpriseMission();
+  }
+
+  // Se o dia da missão já passou e NÃO foi completada -> PENALIDADE DE -1 PONTO!
+  if (STATE.surpriseMission && STATE.surpriseMission.assignedDate < today) {
+    if (!STATE.surpriseMission.completed && !STATE.surpriseMission.penaltyApplied) {
+      STATE.surpriseMission.penaltyApplied = true;
+      // 2 horas = 1 ponto (deduz 120 minutos = 1.0 pt)
+      const penaltyMinutes = 120;
+      STATE.totalMinutes = Math.max(0, STATE.totalMinutes - penaltyMinutes);
+      STATE.totalPoints = calculatePoints(STATE.totalMinutes);
+      const newLevelObj = getLevelForPoints(STATE.totalPoints);
+      STATE.currentLevel = newLevelObj.level;
+
+      if (!STATE.penaltyHistory) STATE.penaltyHistory = [];
+      STATE.penaltyHistory.push({
+        date: STATE.surpriseMission.assignedDate,
+        mission: STATE.surpriseMission.title,
+        pointsLost: 1.0,
+        appliedAt: new Date().toISOString()
+      });
+
+      saveState();
+      setTimeout(() => {
+        triggerPenaltyModal(STATE.surpriseMission);
+      }, 700);
+    }
+  }
+
+  // Se hoje É o dia da missão surpresa e o usuário ainda não viu o alerta
+  if (STATE.surpriseMission && STATE.surpriseMission.assignedDate === today) {
+    if (!STATE.surpriseMission.alertSeen && !STATE.surpriseMission.completed) {
+      STATE.surpriseMission.alertSeen = true;
+      saveState();
+      setTimeout(() => {
+        triggerSurpriseMissionModal();
+      }, 500);
+    }
+  }
+}
+
+// Verifica virada de Ano: Reseta pontos e níveis para que todos comecem do zero
+function checkYearTurnover() {
+  const currentYear = new Date().getFullYear();
+  if (!STATE.currentSeasonYear) {
+    STATE.currentSeasonYear = currentYear;
+    saveState();
+    return;
+  }
+
+  if (STATE.currentSeasonYear < currentYear) {
+    const pastYear = STATE.currentSeasonYear;
+    const finalLevelObj = getLevelForPoints(STATE.totalPoints);
+
+    if (!STATE.seasonHistory) STATE.seasonHistory = [];
+    STATE.seasonHistory.unshift({
+      year: pastYear,
+      points: STATE.totalPoints,
+      level: STATE.currentLevel,
+      rankTier: finalLevelObj.rankTier || 'E',
+      rankName: finalLevelObj.name,
+      date: new Date().toISOString()
+    });
+
+    // Zera pontos e nível para a nova temporada anual
+    STATE.totalMinutes = 0;
+    STATE.totalPoints = 0.0;
+    STATE.currentLevel = 1;
+    STATE.currentSeasonYear = currentYear;
+    saveState();
+
+    setTimeout(() => {
+      triggerSeasonResetModal(pastYear, finalLevelObj);
+    }, 600);
+  }
+}
+
 // Check for date turnover (new day resets today's sessions and checks streak)
 function checkDateTurnover() {
+  checkYearTurnover();
+  checkSurpriseMissionStatus();
+
   const today = getTodayDateStr();
   if (STATE.todayDate !== today) {
     // Check streak
@@ -424,6 +581,15 @@ function addTrainingMinutes(mins, type = "Treino") {
   const todayTotalMin = STATE.todaySessions.reduce((acc, s) => acc + s.durationMin, 0);
   if (!STATE.dailyChallenge.completed && todayTotalMin >= STATE.dailyChallenge.targetMinutes) {
     STATE.dailyChallenge.completed = true;
+  }
+
+  // Check surprise mission (se hoje for o dia sorteado)
+  if (STATE.surpriseMission && STATE.surpriseMission.assignedDate === today && !STATE.surpriseMission.completed) {
+    if (todayTotalMin >= STATE.surpriseMission.targetMinutes) {
+      STATE.surpriseMission.completed = true;
+      triggerHaptic('success');
+      sfx.playLevelUp();
+    }
   }
 
   updateLevelAndPoints();

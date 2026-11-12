@@ -37,6 +37,9 @@
         <button class="btn btn-outline" id="headerInstallBtn" style="padding: 4px 8px; font-size: 0.72rem; border-color: var(--accent-green); color: var(--accent-green); display: flex; align-items: center; gap: 4px;" onclick="openInstallModal()">
           <span>📲</span> Instalar
         </button>
+        <button class="btn-icon" id="btnForceUpdateApp" style="border-radius: 50%; width: 34px; height: 34px; font-size: 0.92rem;" title="Atualizar aplicativo para a versão mais recente sem desinstalar" onclick="forceAppUpdate(true)">
+          🔄
+        </button>
         <button class="btn-icon" style="border-radius: 50%; width: 34px; height: 34px; font-size: 0.95rem;" title="Mudar Cores / Temas do App" onclick="openThemeModal()">
           🎨
         </button>
@@ -49,6 +52,11 @@
         </div>
       </div>
     </header>
+
+    <!-- PWA Auto-Update Banner (Avisa quando houver novidade sem desinstalar) -->
+    <div id="appUpdateBanner" class="app-update-banner" style="display: none;" onclick="forceAppUpdate(true)">
+      <span>⚡ Nova versão pronta! Toque aqui para atualizar sem desinstalar o app.</span>
+    </div>
 
     <!-- TAB 1: INÍCIO (DASHBOARD & NÍVEL) -->
     <main id="tab-home" class="tab-content active">
@@ -93,6 +101,30 @@
             <div style="font-size: 1.1rem; font-weight: 800; color: var(--accent-orange);" id="heroTotalHoursDisplay">0h 0m</div>
             <div style="font-size: 0.65rem; color: var(--text-muted);">Total treinado</div>
           </div>
+        </div>
+      </section>
+
+      <!-- ALERTA DE MISSÃO SURPRESA (SOLO LEVELING - RISCO DE PENALIDADE -1 PONTO) -->
+      <section id="surpriseMissionSection" class="surprise-mission-card" style="display: none;">
+        <div class="surprise-mission-header">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="surprise-badge-pulse">🚨 ALERTA DO SISTEMA</span>
+            <span class="surprise-status-badge" id="surpriseStatusBadge">MISSÃO SURPRESA</span>
+          </div>
+          <span class="surprise-penalty-warning">⚠️ RISCO: -1.0 PONTO</span>
+        </div>
+        <h3 class="surprise-title" id="surpriseMissionTitle">Treino de Emergência: 45 min hoje!</h3>
+        <p class="surprise-desc" id="surpriseMissionDesc">
+          Missão surpresa obrigatória da semana! Complete até as 23:59 de hoje para evitar a perda de 1 ponto no seu Ranking.
+        </p>
+        <div class="progress-container" style="margin: 8px 0;">
+          <div class="progress-bar surprise-progress-bar" id="surpriseProgressBar" style="width: 0%;"></div>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.75rem;">
+          <span id="surpriseProgressText" style="color: #cbd5e1; font-weight: 700;">0 / 45 min concluídos</span>
+          <button class="btn btn-crimson" id="btnClaimSurpriseMission" style="padding: 5px 12px; font-size: 0.75rem;" onclick="claimSurpriseMission()">
+            🛡️ Concluir Missão
+          </button>
         </div>
       </section>
 
@@ -1147,17 +1179,104 @@
     </div>
   </div>
 
+  <!-- MODAL: ALERTA DE MISSÃO SURPRESA (SOLO LEVELING) -->
+  <div class="modal-backdrop" id="surpriseMissionModal">
+    <div class="modal-box surprise-modal-box">
+      <div style="font-size: 3rem; margin-bottom: 6px;">🚨</div>
+      <span class="surprise-modal-tag">ALERTA CRÍTICO DO SISTEMA</span>
+      <h2 class="surprise-modal-title" id="modalSurpriseTitle">MISSÃO SURPRESA DE HERÓI!</h2>
+      <div class="surprise-modal-badge-box">
+        <span style="color: #ef4444; font-weight: 900; font-size: 0.88rem;">⚠️ PENALIDADE: -1.0 PONTO NO RANK</span>
+      </div>
+      <p class="surprise-modal-desc" id="modalSurpriseDesc">
+        O sistema ativou a missão surpresa obrigatória desta semana!<br>
+        Você precisa treinar pelo menos <strong><span id="modalSurpriseMin">45</span> minutos hoje</strong> até as 23:59.<br>
+        Se falhar, <strong>1 ponto será deduzido do seu Rank</strong> automaticamente na virada do dia!
+      </p>
+      <button class="btn btn-crimson btn-full" style="padding: 10px; font-size: 0.9rem;" onclick="closeSurpriseMissionModal()">
+        ⚔️ Aceitar Missão e Treinar!
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL: PENALIDADE DO SISTEMA (-1 PONTO) -->
+  <div class="modal-backdrop" id="penaltyModal">
+    <div class="modal-box penalty-modal-box">
+      <div style="font-size: 3.2rem; margin-bottom: 6px;">☠️</div>
+      <span style="background: #dc2626; color: #fff; font-weight: 800; font-size: 0.75rem; padding: 4px 12px; border-radius: 12px; text-transform: uppercase;">
+        PENALIDADE EXECUTADA
+      </span>
+      <h2 style="font-size: 1.45rem; font-weight: 900; margin: 12px 0 6px; color: #ef4444;">
+        VOCÊ PERDEU 1 PONTO!
+      </h2>
+      <p style="color: #cbd5e1; font-size: 0.85rem; line-height: 1.5; margin-bottom: 16px;">
+        O dia da <strong>Missão Surpresa</strong> terminou e você não atingiu a meta obrigatória.<br>
+        O sistema executou a punição: <strong style="color: #ef4444;">-1.0 Ponto deduzido</strong> do seu total acumulado.
+      </p>
+      <div style="background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35); border-radius: 8px; padding: 10px; margin-bottom: 16px; font-size: 0.78rem; color: #fca5a5;">
+        ⚡ <em>"Um Caçador que foge da batalha perde a honra diante do Rank Supremo."</em>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="closePenaltyModal()">
+        💪 Treinar Dobrado e Recuperar!
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL: RESET ANUAL (NOVA TEMPORADA DE HERÓI) -->
+  <div class="modal-backdrop" id="seasonResetModal">
+    <div class="modal-box season-reset-modal-box">
+      <div style="font-size: 3.2rem; margin-bottom: 6px;">🎆</div>
+      <span style="background: linear-gradient(135deg, #00d2ff, #2563eb); color: #fff; font-weight: 800; font-size: 0.75rem; padding: 4px 12px; border-radius: 12px; text-transform: uppercase;">
+        NOVA TEMPORADA ANUAL
+      </span>
+      <h2 style="font-size: 1.5rem; font-weight: 900; margin: 12px 0 6px; color: #fff;" id="seasonResetTitle">
+        BEM-VINDO AO NOVO ANO!
+      </h2>
+      <p style="color: #cbd5e1; font-size: 0.85rem; line-height: 1.5; margin-bottom: 16px;">
+        O ano virou! Conforme as regras da comunidade, todos os atletas reiniciam do zero (Rank E, 0.0 pts) para que a disputa pelo <strong>RANK SS SUPREMO</strong> seja disputada do início por todos!
+      </p>
+      <div id="seasonArchiveSummary" style="background: rgba(0, 210, 255, 0.08); border: 1px solid rgba(0, 210, 255, 0.3); border-radius: 8px; padding: 10px; margin-bottom: 16px; font-size: 0.8rem; color: #bae6fd;">
+        <!-- Injetado via JS -->
+      </div>
+      <button class="btn btn-primary btn-full" onclick="closeSeasonResetModal()">
+        🔥 Iniciar Temporada e Subir Rank!
+      </button>
+    </div>
+  </div>
+
   <script src="app.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js').then((reg) => {
-          // Otimização periódica: verifica novas versões a cada 2 minutos
+          // Checagem imediata de nova versão ao carregar
+          reg.update();
+
+          // Monitora se um novo SW está pronto
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  const banner = document.getElementById("appUpdateBanner");
+                  if (banner) banner.style.display = "block";
+                }
+              });
+            }
+          });
+
+          // Checa atualizações a cada 2 minutos
           setInterval(() => {
             reg.update();
           }, 2 * 60 * 1000);
         }).catch((err) => {
-          console.log('SW registration failed:', err);
+          console.log('SW registration error:', err);
+        });
+
+        // Recarrega sem desinstalar quando o novo SW assumir o controle
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          console.log('[PWA] Nova versão assumiu o controle. Recarregando...');
+          window.location.reload();
         });
       });
     }

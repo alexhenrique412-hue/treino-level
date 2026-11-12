@@ -1789,3 +1789,181 @@ button, .btn, .card, .session-item, .segmented-btn, .nav-btn,
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
 }
+
+/* ========================================================
+   ALERTA DE MISSÃO SURPRESA (SOLO LEVELING STYLE)
+======================================================== */
+.surprise-mission-card {
+  background: linear-gradient(135deg, rgba(220, 38, 38, 0.18), rgba(88, 28, 135, 0.25), rgba(15, 23, 42, 0.95));
+  border: 1.5px solid #ef4444;
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.35), inset 0 0 15px rgba(239, 68, 68, 0.15);
+  animation: pulseCardEmergency 3s ease infinite alternate;
+}
+
+@keyframes pulseCardEmergency {
+  0% {
+    box-shadow: 0 0 16px rgba(239, 68, 68, 0.3), inset 0 0 10px rgba(239, 68, 68, 0.1);
+    border-color: #ef4444;
+  }
+  100% {
+    box-shadow: 0 0 30px rgba(239, 68, 68, 0.6), inset 0 0 20px rgba(239, 68, 68, 0.25);
+    border-color: #f87171;
+  }
+}
+
+.surprise-mission-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.surprise-badge-pulse {
+  background: #dc2626;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 900;
+  padding: 3px 8px;
+  border-radius: 6px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  animation: pulseBadge 1.2s infinite;
+}
+
+@keyframes pulseBadge {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.05); }
+}
+
+.surprise-status-badge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #fca5a5;
+}
+
+.surprise-penalty-warning {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #fecaca;
+  font-size: 0.68rem;
+  font-weight: 900;
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.surprise-title {
+  font-size: 1.05rem;
+  font-weight: 900;
+  color: #fff;
+  margin: 4px 0;
+  line-height: 1.25;
+}
+
+.surprise-desc {
+  font-size: 0.78rem;
+  color: #cbd5e1;
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+
+.surprise-progress-bar {
+  background: linear-gradient(90deg, #ef4444, #f59e0b, #10b981) !important;
+}
+
+.btn-crimson {
+  background: linear-gradient(135deg, #ef4444, #b91c1c);
+  color: #fff;
+  border: 1px solid #f87171;
+  font-weight: 800;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-crimson:hover {
+  filter: brightness(1.15);
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+}
+
+/* ========================================================
+   PWA AUTO-UPDATE BANNER & MODALS
+======================================================== */
+.app-update-banner {
+  background: linear-gradient(135deg, #0284c7, #0369a1);
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-align: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1.5px solid #38bdf8;
+  box-shadow: 0 2px 10px rgba(2, 132, 199, 0.4);
+  animation: slideDownUpdate 0.3s ease;
+  z-index: 1000;
+}
+
+@keyframes slideDownUpdate {
+  from { transform: translateY(-100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.surprise-modal-box {
+  text-align: center;
+  border: 2px solid #ef4444 !important;
+  box-shadow: 0 0 40px rgba(239, 68, 68, 0.5) !important;
+  background: linear-gradient(135deg, #180808, #0e1320) !important;
+}
+
+.surprise-modal-tag {
+  background: #dc2626;
+  color: #fff;
+  font-weight: 900;
+  font-size: 0.75rem;
+  padding: 4px 12px;
+  border-radius: 12px;
+  text-transform: uppercase;
+}
+
+.surprise-modal-title {
+  font-size: 1.4rem;
+  font-weight: 900;
+  margin: 12px 0 6px;
+  color: #fff;
+}
+
+.surprise-modal-badge-box {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  padding: 6px 12px;
+  border-radius: 8px;
+  display: inline-block;
+  margin-bottom: 12px;
+}
+
+.surprise-modal-desc {
+  color: #cbd5e1;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+
+.penalty-modal-box {
+  text-align: center;
+  border: 2px solid #dc2626 !important;
+  box-shadow: 0 0 35px rgba(220, 38, 38, 0.5) !important;
+  background: #130a0a !important;
+}
+
+.season-reset-modal-box {
+  text-align: center;
+  border: 2px solid #00d2ff !important;
+  box-shadow: 0 0 40px rgba(0, 210, 255, 0.4) !important;
+  background: linear-gradient(135deg, #041226, #070e1c) !important;
+}
