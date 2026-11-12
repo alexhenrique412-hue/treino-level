@@ -219,6 +219,7 @@ input, select, textarea {
   display: flex;
   flex-direction: column;
   position: relative;
+  overflow-x: hidden;
   padding-bottom: calc(90px + env(safe-area-inset-bottom, 0px));
 }
 
@@ -1013,16 +1014,20 @@ input, select, textarea {
 
 .segmented-btn {
   flex: 1;
-  padding: 8px 12px;
+  min-width: 0;
+  padding: 8px 6px;
   background: transparent;
   border: none;
   border-radius: 6px;
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
   text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .segmented-btn.active {

@@ -263,16 +263,16 @@
         </div>
       </div>
 
-      <!-- Segmented Control: GPS vs Pular Corda vs Manual -->
+      <!-- Segmented Control: GPS vs Corda vs Esteira -->
       <div class="segmented-control" style="margin-top: 14px;">
         <button class="segmented-btn active" id="subtab-gps-btn" onclick="switchRunSubtab('gps')">
-          🛰️ GPS (Corrida / Bike)
+          🛰️ GPS
         </button>
         <button class="segmented-btn" id="subtab-rope-btn" onclick="switchRunSubtab('rope')">
-          🪢 Pular Corda (Sensor)
+          🪢 Corda
         </button>
         <button class="segmented-btn" id="subtab-manual-btn" onclick="switchRunSubtab('manual')">
-          📝 Esteira (Manual)
+          📝 Esteira
         </button>
       </div>
 
@@ -434,7 +434,6 @@
           <div style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.25); border-radius: var(--radius-sm); padding: 10px; margin-bottom: 14px; font-size: 0.75rem; color: #fca5a5; line-height: 1.4;">
             🛡️ <strong>Regra Oficial Anti-Fraude:</strong> Registros manuais de esteira servem para anotação pessoal de quilometragem e <strong>NÃO somam pontos de Nível</strong>. Apenas treinos ao vivo rastreados pelo nosso <strong>GPS</strong> (Corrida/Bike) ou pelo <strong>Sensor de Pular Corda</strong> oficial somam pontos de evolução!
           </div>
-          </div>
 
           <form id="runForm" onsubmit="handleSaveRun(event)">
             <div class="form-row">
@@ -464,14 +463,14 @@
       <!-- Running History -->
       <div class="card">
         <div class="card-title" style="display: flex; justify-content: space-between; align-items: center;">
-          <span>Histórico de Corridas & Rotas</span>
+          <span>Histórico de Cardio & Rotas</span>
           <button type="button" class="btn btn-outline" style="font-size: 0.7rem; padding: 4px 10px; color: #ef4444; border-color: rgba(239,68,68,0.4);" onclick="clearAllRunsHistory()">
             🗑️ Limpar Tudo
           </button>
         </div>
         <div id="runningHistoryList">
           <p style="color: var(--text-muted); font-size: 0.8rem; text-align: center; padding: 10px 0;">
-            Nenhuma corrida registrada ainda. Amarre os tênis e bora! 👟
+            Nenhuma atividade registrada ainda. Bora treinar! ⚡
           </p>
         </div>
       </div>
