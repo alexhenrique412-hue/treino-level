@@ -3583,30 +3583,6 @@ function renderLevelsTiersView() {
     </div>
   `).join('');
 }
-          </div>
-          <div style="text-align: right; font-size: 0.75rem;">
-            <div style="font-weight: 700; color: var(--accent-orange);">${l.minPoints} Pontos</div>
-            <div style="font-size: 0.65rem; color: var(--text-muted);">(${requiredHours}h de treino)</div>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  // Badges Grid
-  const badgesGrid = document.getElementById("badgesGrid");
-  if (!badgesGrid) return;
-  badgesGrid.innerHTML = STATE.badges.map(b => `
-    <div style="background: rgba(255,255,255,0.03); border: 1px solid ${b.unlocked ? 'var(--accent-green)' : 'var(--border-color)'}; border-radius: var(--radius-sm); padding: 10px; text-align: center; opacity: ${b.unlocked ? '1' : '0.45'};">
-      <div style="font-size: 1.8rem; margin-bottom: 4px;">${b.icon}</div>
-      <div style="font-size: 0.8rem; font-weight: 800; color: ${b.unlocked ? '#fff' : 'var(--text-muted)'};">${b.name}</div>
-      <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">${b.desc}</div>
-      <span style="display: inline-block; font-size: 0.62rem; margin-top: 6px; padding: 2px 6px; border-radius: 4px; background: ${b.unlocked ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.05)'}; color: ${b.unlocked ? 'var(--accent-green)' : 'var(--text-muted)'};">
-        ${b.unlocked ? 'DESBLOQUEADO' : 'BLOQUEADO'}
-      </span>
-    </div>
-  `).join('');
-}
 
 function renderLevelsTab() {
   if (currentLevelsSubtab === 'ranking') {
