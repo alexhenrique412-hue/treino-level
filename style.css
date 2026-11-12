@@ -427,18 +427,23 @@ input, select, textarea {
 }
 
 .level-icon-badge {
-  width: 76px;
-  height: 76px;
-  border-radius: 50%;
+  width: 80px;
+  height: 80px;
+  border-radius: 20px;
   margin: 0 auto 12px;
-  background: linear-gradient(135deg, #10b981, #059669);
+  background: linear-gradient(135deg, rgba(14, 25, 48, 0.95), rgba(4, 8, 20, 0.98));
   display: flex;
   align-items: center;
   justify-content: center;
+  font-family: 'Impact', 'Segoe UI Black', -apple-system, sans-serif;
+  font-weight: 900;
   font-size: 2.2rem;
-  box-shadow: 0 0 25px var(--accent-green-glow);
-  border: 3px solid rgba(255, 255, 255, 0.3);
+  letter-spacing: 1.5px;
+  color: #00d2ff;
+  border: 2px solid rgba(0, 210, 255, 0.6);
+  box-shadow: 0 0 25px rgba(0, 210, 255, 0.4), inset 0 0 15px rgba(0, 210, 255, 0.15);
   animation: pulseBadge 3s infinite alternate;
+  text-shadow: 0 0 15px rgba(0, 210, 255, 0.8);
 }
 
 @keyframes pulseBadge {
@@ -1665,4 +1670,122 @@ select option {
   text-transform: uppercase;
   color: var(--text-muted);
   margin-top: 6px;
+}
+
+/* ========================================================
+   HERO / HUNTER RANK SYSTEM (SOLO LEVELING RPG STYLE)
+======================================================== */
+.hero-rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Impact', 'Segoe UI Black', -apple-system, sans-serif;
+  font-weight: 900;
+  font-size: 0.78rem;
+  letter-spacing: 0.8px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  user-select: none;
+  line-height: 1.1;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  transition: all 0.2s ease;
+}
+
+.hero-rank-badge.rank-e {
+  background: linear-gradient(135deg, #334155, #1e293b);
+  color: #cbd5e1;
+  border: 1px solid rgba(148, 163, 184, 0.4);
+}
+
+.hero-rank-badge.rank-d {
+  background: linear-gradient(135deg, #0369a1, #0c4a6e);
+  color: #bae6fd;
+  border: 1px solid rgba(56, 189, 248, 0.5);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+}
+
+.hero-rank-badge.rank-c {
+  background: linear-gradient(135deg, #047857, #064e3b);
+  color: #a7f3d0;
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+}
+
+.hero-rank-badge.rank-b {
+  background: linear-gradient(135deg, #1d4ed8, #1e3a8a);
+  color: #bfdbfe;
+  border: 1px solid rgba(59, 130, 246, 0.6);
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
+}
+
+.hero-rank-badge.rank-a {
+  background: linear-gradient(135deg, #7c3aed, #4c1d95);
+  color: #e9d5ff;
+  border: 1px solid rgba(168, 85, 247, 0.6);
+  box-shadow: 0 0 14px rgba(168, 85, 247, 0.5);
+}
+
+.hero-rank-badge.rank-s {
+  background: linear-gradient(135deg, #d97706, #78350f);
+  color: #fef08a;
+  border: 1px solid rgba(245, 158, 11, 0.7);
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.5);
+}
+
+.hero-rank-badge.rank-s-plus {
+  background: linear-gradient(135deg, #db2777, #831843);
+  color: #fbcfe8;
+  border: 1px solid rgba(236, 72, 153, 0.75);
+  box-shadow: 0 0 18px rgba(236, 72, 153, 0.6);
+}
+
+/* RANK SS SUPREMO: Efeito Épico de Monarca das Sombras */
+.hero-rank-badge.rank-ss,
+.hero-rank-badge.rank-ss-supreme {
+  background: linear-gradient(135deg, #00d2ff, #2563eb, #9333ea);
+  background-size: 200% 200%;
+  color: #ffffff;
+  border: 1.5px solid #00d2ff;
+  text-shadow: 0 0 8px #00d2ff, 0 0 16px #38bdf8;
+  box-shadow: 0 0 18px rgba(0, 210, 255, 0.8), inset 0 0 10px rgba(0, 210, 255, 0.4);
+  animation: supremeGlowPulse 2s ease infinite alternate;
+}
+
+@keyframes supremeGlowPulse {
+  0% {
+    box-shadow: 0 0 14px rgba(0, 210, 255, 0.7), inset 0 0 6px rgba(0, 210, 255, 0.3);
+    border-color: #00d2ff;
+  }
+  100% {
+    box-shadow: 0 0 28px rgba(0, 210, 255, 1), 0 0 45px rgba(37, 99, 235, 0.7), inset 0 0 14px rgba(0, 210, 255, 0.7);
+    border-color: #38bdf8;
+  }
+}
+
+.card-supreme-tier {
+  border: 1.5px solid rgba(0, 210, 255, 0.55) !important;
+  box-shadow: 0 0 25px rgba(0, 210, 255, 0.25), inset 0 0 15px rgba(0, 210, 255, 0.08) !important;
+  background: linear-gradient(135deg, rgba(4, 15, 38, 0.9), rgba(2, 6, 18, 0.96)) !important;
+}
+
+/* ========================================================
+   APP PERFORMANCE & TOUCH OPTIMIZATIONS
+======================================================== */
+button, .btn, .card, .session-item, .segmented-btn, .nav-btn, 
+.catalog-exercise-card, .template-plan-card, .header-user {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#leaderboardList, #runningHistoryList, #exerciseListContainer {
+  contain: content;
+  will-change: transform;
+}
+
+.app-container {
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
 }

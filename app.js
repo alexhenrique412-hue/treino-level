@@ -83,17 +83,52 @@ class SoundEffects {
 }
 const sfx = new SoundEffects();
 
-// --- LEVEL DEFINITIONS ---
+// --- HERO / HUNTER RANK DEFINITIONS (SOLO LEVELING RPG SYSTEM) ---
 const LEVELS = [
-  { level: 1, name: "Novato de Ferro", badge: "🥉", rank: "Iniciando a Jornada", minPoints: 0, maxPoints: 1.5 },
-  { level: 2, name: "Iniciado Focado", badge: "🥈", rank: "Criando o Hábito", minPoints: 1.5, maxPoints: 4.0 },
-  { level: 3, name: "Rato de Academia", badge: "🥇", rank: "Disciplina de Aço", minPoints: 4.0, maxPoints: 8.0 },
-  { level: 4, name: "Atleta Dedicado", badge: "💎", rank: "Ritmo Imparável", minPoints: 8.0, maxPoints: 15.0 },
-  { level: 5, name: "Monstro da Maromba", badge: "🦁", rank: "Físico em Construção", minPoints: 15.0, maxPoints: 25.0 },
-  { level: 6, name: "Titã dos Pesos", badge: "⚡", rank: "Força Brutal", minPoints: 25.0, maxPoints: 40.0 },
-  { level: 7, name: "Lenda Suprema", badge: "👑", rank: "Inspiração Total", minPoints: 40.0, maxPoints: 60.0 },
-  { level: 8, name: "Deus do Olimpo", badge: "🌌", rank: "Transcendeu os Limites", minPoints: 60.0, maxPoints: 9999 }
+  { level: 1, name: "Novato Desperto", rankTier: "E", badge: "E", rank: "Iniciando a Jornada", minPoints: 0, maxPoints: 1.5 },
+  { level: 2, name: "Caçador em Treino", rankTier: "D", badge: "D", rank: "Criando o Hábito", minPoints: 1.5, maxPoints: 4.0 },
+  { level: 3, name: "Caçador Notável", rankTier: "C", badge: "C", rank: "Disciplina de Aço", minPoints: 4.0, maxPoints: 8.0 },
+  { level: 4, name: "Guerreiro de Elite", rankTier: "B", badge: "B", rank: "Ritmo Imparável", minPoints: 8.0, maxPoints: 15.0 },
+  { level: 5, name: "Mestre dos Pesos", rankTier: "A", badge: "A", rank: "Físico em Construção", minPoints: 15.0, maxPoints: 25.0 },
+  { level: 6, name: "Caçador Nacional", rankTier: "S", badge: "S", rank: "Força Brutal", minPoints: 25.0, maxPoints: 40.0 },
+  { level: 7, name: "Lenda Suprema", rankTier: "S+", badge: "S+", rank: "Inspiração Total", minPoints: 40.0, maxPoints: 60.0 },
+  { level: 8, name: "Monarca Supremo", rankTier: "SS", badge: "SS", rank: "Poder Máximo Absoluto", minPoints: 60.0, maxPoints: 9999 }
 ];
+
+// Helper: Render Hero Rank Badge HTML
+function getRankBadgeHtml(rankTier, isSupreme = false) {
+  const raw = String(rankTier || 'E').toUpperCase().trim();
+  let cssClass = 'rank-e';
+  let label = 'RANK E';
+
+  if (isSupreme || raw === 'SS' || raw.includes('SS')) {
+    cssClass = 'rank-ss-supreme';
+    label = 'RANK SS';
+  } else if (raw === 'S+' || raw === 'S-PLUS') {
+    cssClass = 'rank-s-plus';
+    label = 'RANK S+';
+  } else if (raw === 'S') {
+    cssClass = 'rank-s';
+    label = 'RANK S';
+  } else if (raw === 'A') {
+    cssClass = 'rank-a';
+    label = 'RANK A';
+  } else if (raw === 'B') {
+    cssClass = 'rank-b';
+    label = 'RANK B';
+  } else if (raw === 'C') {
+    cssClass = 'rank-c';
+    label = 'RANK C';
+  } else if (raw === 'D') {
+    cssClass = 'rank-d';
+    label = 'RANK D';
+  } else {
+    cssClass = 'rank-e';
+    label = 'RANK E';
+  }
+
+  return `<span class="hero-rank-badge ${cssClass}">${label}</span>`;
+}
 
 // --- DEFAULT WORKOUT ROUTINES (7 DAYS) ---
 const DEFAULT_WORKOUT_ROUTINES = {
@@ -982,7 +1017,7 @@ function initRunMapIfNeeded() {
 
   if (!leafletMap) {
     // Default center (ex: Brasil central or fallback)
-    leafletMap = L.map('runMap', { zoomControl: false }).setView([-23.5505, -46.6333], 15);
+    leafletMap = L.map('runMap', { zoomControl: false, preferCanvas: true }).setView([-23.5505, -46.6333], 15);
     L.control.zoom({ position: 'bottomright' }).addTo(leafletMap);
 
     // Street layer (OpenStreetMap)
@@ -1416,7 +1451,7 @@ function initRouteModalMap(routePoints, isBike) {
     routeModalMap = null;
   }
 
-  routeModalMap = L.map('routeModalMap', { zoomControl: false });
+  routeModalMap = L.map('routeModalMap', { zoomControl: false, preferCanvas: true });
   L.control.zoom({ position: 'bottomright' }).addTo(routeModalMap);
 
   // Satellite layer (Esri)
@@ -2579,9 +2614,12 @@ function handleSaveProfile(e) {
 // --- LEVEL UP CELEBRATION MODAL & CONFETTI ---
 function triggerLevelUpModal(levelObj) {
   sfx.playLevelUp();
-  document.getElementById("levelUpIcon").innerText = levelObj.badge;
-  document.getElementById("levelUpTitle").innerText = `NÍVEL ${levelObj.level}: ${levelObj.name.toUpperCase()}`;
-  document.getElementById("levelUpDesc").innerText = `Você atingiu ${STATE.totalPoints.toFixed(1)} pontos (${Math.floor(STATE.totalMinutes/60)}h ${STATE.totalMinutes%60}m acumulados)! Patente: ${levelObj.rank}`;
+  const iconEl = document.getElementById("levelUpIcon");
+  if (iconEl) {
+    iconEl.innerHTML = `<div style="display:flex; justify-content:center; margin-bottom: 12px;">${getRankBadgeHtml(levelObj.rankTier, levelObj.rankTier === 'SS')}</div>`;
+  }
+  document.getElementById("levelUpTitle").innerText = `RANK ${levelObj.rankTier}: ${levelObj.name.toUpperCase()}`;
+  document.getElementById("levelUpDesc").innerText = `Você atingiu ${STATE.totalPoints.toFixed(1)} pontos (${Math.floor(STATE.totalMinutes/60)}h ${STATE.totalMinutes%60}m acumulados)! Rank de Herói: ${levelObj.rank}`;
   document.getElementById("levelUpModal").classList.add("open");
   launchConfetti();
 }
@@ -2677,7 +2715,8 @@ function renderHeader() {
   } else {
     avatarEl.innerHTML = (STATE.user && STATE.user.avatar) ? STATE.user.avatar : "G";
   }
-  document.getElementById("headerUserName").innerHTML = `${STATE.user.name} <span class="level-tag" id="headerLevelTag">NÍVEL ${STATE.currentLevel}</span>`;
+  const currentLevelObjHeader = getLevelForPoints(STATE.totalPoints);
+  document.getElementById("headerUserName").innerHTML = `${STATE.user.name} <span class="level-tag" id="headerLevelTag">RANK ${currentLevelObjHeader.rankTier || 'E'} • NV ${STATE.currentLevel}</span>`;
   document.getElementById("headerStreakCount").innerText = STATE.streakDays || 1;
 }
 
@@ -2689,8 +2728,12 @@ function renderHomeTab() {
   const nextLevelObj = LEVELS.find(l => l.level === currentLevelObj.level + 1) || currentLevelObj;
 
   // Level Hero
-  document.getElementById("heroLevelBadge").innerText = currentLevelObj.badge;
-  document.getElementById("heroLevelName").innerText = `Nível ${currentLevelObj.level}: ${currentLevelObj.name}`;
+  const heroBadgeEl = document.getElementById("heroLevelBadge");
+  if (heroBadgeEl) {
+    heroBadgeEl.innerText = currentLevelObj.rankTier || "E";
+    heroBadgeEl.className = `level-icon-badge rank-${(currentLevelObj.rankTier || 'E').toLowerCase().replace('+', '-plus')}`;
+  }
+  document.getElementById("heroLevelName").innerText = `Rank ${currentLevelObj.rankTier} • ${currentLevelObj.name}`;
   document.getElementById("heroLevelRank").innerText = currentLevelObj.rank;
 
   // Progress Bar
@@ -2701,8 +2744,8 @@ function renderHomeTab() {
 
   document.getElementById("heroCurrentPoints").innerText = `${STATE.totalPoints.toFixed(2)} Pontos`;
   document.getElementById("heroNextLevelPoints").innerText = nextLevelObj.level > currentLevelObj.level 
-    ? `Próx: Nível ${nextLevelObj.level} (${nextLevelObj.minPoints} pts)` 
-    : "Patente Máxima Alcançada! 👑";
+    ? `Próx: Rank ${nextLevelObj.rankTier} (${nextLevelObj.minPoints} pts)` 
+    : "Rank Supremo Alcançado! ⚡";
 
   const totalHours = Math.floor(STATE.totalMinutes / 60);
   const totalRemainMins = STATE.totalMinutes % 60;
@@ -2936,21 +2979,21 @@ function renderRunningTab() {
   }
 }
 
-// --- GLOBAL LEADERBOARD & RANKING ENGINE ---
+// --- GLOBAL LEADERBOARD & HERO RANKING ENGINE ---
 let currentLevelsSubtab = 'ranking';
 let currentRankingFilter = 'points';
 
 const GLOBAL_ATHLETES_SEED = [
-  { id: "g1", name: "Titan Victor", country: "🇧🇷", level: 7, rank: "Lenda Suprema", badge: "👑", points: 54.0, km: 78.5, streak: 35, avatarBg: "#f59e0b" },
-  { id: "g2", name: "Marcus Stone", country: "🇺🇸", level: 6, rank: "Titã dos Pesos", badge: "⚡", points: 38.5, km: 52.0, streak: 22, avatarBg: "#ef4444" },
-  { id: "g3", name: "Lucas Viking", country: "🇧🇷", level: 5, rank: "Monstro da Maromba", badge: "🦁", points: 24.0, km: 64.2, streak: 19, avatarBg: "#8b5cf6" },
-  { id: "g4", name: "Alexandre Kuro", country: "🇯🇵", level: 5, rank: "Monstro da Maromba", badge: "🦁", points: 18.5, km: 34.0, streak: 14, avatarBg: "#10b981" },
-  { id: "g5", name: "Diego Alencar", country: "🇧🇷", level: 4, rank: "Atleta Dedicado", badge: "💎", points: 13.0, km: 28.5, streak: 10, avatarBg: "#3b82f6" },
-  { id: "g6", name: "Sarah Iron", country: "🇨🇦", level: 4, rank: "Atleta Dedicado", badge: "💎", points: 10.5, km: 42.0, streak: 12, avatarBg: "#ec4899" },
-  { id: "g7", name: "Rodrigo B.", country: "🇧🇷", level: 3, rank: "Rato de Academia", badge: "🥇", points: 7.0, km: 16.5, streak: 7, avatarBg: "#f97316" },
-  { id: "g8", name: "Enzo Fitt", country: "🇵🇹", level: 3, rank: "Rato de Academia", badge: "🥇", points: 5.5, km: 14.0, streak: 6, avatarBg: "#06b6d4" },
-  { id: "g9", name: "Matheus Silva", country: "🇧🇷", level: 2, rank: "Iniciado Focado", badge: "🥈", points: 3.5, km: 9.0, streak: 4, avatarBg: "#10b981" },
-  { id: "g10", name: "Carlos Treino", country: "🇧🇷", level: 2, rank: "Iniciado Focado", badge: "🥈", points: 1.5, km: 4.5, streak: 2, avatarBg: "#64748b" }
+  { id: "g1", name: "Titan Victor", country: "🇧🇷", level: 7, rank: "Lenda Suprema", rankTier: "S+", points: 54.0, km: 78.5, streak: 35, avatarBg: "#f59e0b" },
+  { id: "g2", name: "Marcus Stone", country: "🇺🇸", level: 6, rank: "Caçador Nacional", rankTier: "S", points: 38.5, km: 52.0, streak: 22, avatarBg: "#ef4444" },
+  { id: "g3", name: "Lucas Viking", country: "🇧🇷", level: 5, rank: "Mestre dos Pesos", rankTier: "A", points: 24.0, km: 64.2, streak: 19, avatarBg: "#8b5cf6" },
+  { id: "g4", name: "Alexandre Kuro", country: "🇯🇵", level: 5, rank: "Mestre dos Pesos", rankTier: "A", points: 18.5, km: 34.0, streak: 14, avatarBg: "#10b981" },
+  { id: "g5", name: "Diego Alencar", country: "🇧🇷", level: 4, rank: "Guerreiro de Elite", rankTier: "B", points: 13.0, km: 28.5, streak: 10, avatarBg: "#3b82f6" },
+  { id: "g6", name: "Sarah Iron", country: "🇨🇦", level: 4, rank: "Guerreiro de Elite", rankTier: "B", points: 10.5, km: 42.0, streak: 12, avatarBg: "#ec4899" },
+  { id: "g7", name: "Rodrigo B.", country: "🇧🇷", level: 3, rank: "Caçador Notável", rankTier: "C", points: 7.0, km: 16.5, streak: 7, avatarBg: "#f97316" },
+  { id: "g8", name: "Enzo Fitt", country: "🇵🇹", level: 3, rank: "Caçador Notável", rankTier: "C", points: 5.5, km: 14.0, streak: 6, avatarBg: "#06b6d4" },
+  { id: "g9", name: "Matheus Silva", country: "🇧🇷", level: 2, rank: "Caçador em Treino", rankTier: "D", points: 3.5, km: 9.0, streak: 4, avatarBg: "#10b981" },
+  { id: "g10", name: "Carlos Treino", country: "🇧🇷", level: 1, rank: "Novato Desperto", rankTier: "E", points: 1.0, km: 4.5, streak: 2, avatarBg: "#64748b" }
 ];
 
 function switchLevelsSubtab(subtab) {
@@ -3015,7 +3058,7 @@ function getGlobalLeaderboardList() {
     country: "🇧🇷",
     level: STATE.currentLevel,
     rank: currentLevelObj.rank,
-    badge: currentLevelObj.badge,
+    rankTier: currentLevelObj.rankTier || "E",
     points: STATE.totalPoints,
     km: parseFloat(totalKm.toFixed(1)),
     streak: STATE.streakDays || 1,
@@ -3026,9 +3069,26 @@ function getGlobalLeaderboardList() {
   const list = [...GLOBAL_ATHLETES_SEED, userItem];
 
   if (currentRankingFilter === 'points') {
-    list.sort((a, b) => b.points - a.points);
+    // Sort by points descending, then level descending (pontos e nível juntos)
+    list.sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      return b.level - a.level;
+    });
   } else {
     list.sort((a, b) => b.km - a.km);
+  }
+
+  // RANK SS SUPREMO: O líder isolado (#1 em pontos e nível) ascende ao Rank SS Supremo!
+  if (list.length > 0) {
+    list.forEach((item, index) => {
+      if (index === 0) {
+        item.isTop1Supreme = true;
+        item.rankTier = "SS";
+        item.rank = "Herói Supremo (Top 1 Geral)";
+      } else {
+        item.isTop1Supreme = false;
+      }
+    });
   }
 
   return list;
@@ -3065,25 +3125,25 @@ function renderRankingView(animated = false) {
           <div class="podium-avatar" style="background: ${top2.avatarBg};">
             ${renderPodiumAvatar(top2)}
           </div>
-          <div class="podium-badge">🥈</div>
+          <div class="podium-badge" style="transform: scale(0.9);">${getRankBadgeHtml(top2.rankTier)}</div>
         </div>
         <div class="podium-name">${top2.name} ${top2.isUser ? '(Você)' : ''}</div>
         <div class="podium-pts">${currentRankingFilter === 'points' ? `${top2.points.toFixed(1)} pts` : `${top2.km} km`}</div>
         <div class="podium-block">2</div>
       </div>
 
-      <!-- 1º LUGAR -->
+      <!-- 1º LUGAR: RANK SS SUPREMO -->
       <div class="podium-step rank-1">
         <div class="podium-avatar-box">
-          <div class="podium-crown">👑</div>
-          <div class="podium-avatar" style="background: ${top1.avatarBg};">
+          <div class="podium-crown" style="font-size: 1.05rem; font-weight: 900; color: #00d2ff; text-shadow: 0 0 10px #00d2ff; letter-spacing: 0.5px;">⚡ SUPREMO</div>
+          <div class="podium-avatar" style="background: ${top1.avatarBg}; box-shadow: 0 0 16px rgba(0, 210, 255, 0.7); border-color: #00d2ff;">
             ${renderPodiumAvatar(top1)}
           </div>
-          <div class="podium-badge">🥇</div>
+          <div class="podium-badge" style="transform: scale(0.95);">${getRankBadgeHtml('SS', true)}</div>
         </div>
-        <div class="podium-name" style="color: #f59e0b; font-size: 0.9rem;">${top1.name} ${top1.isUser ? '(Você)' : ''}</div>
-        <div class="podium-pts" style="font-size: 0.8rem; color: #f59e0b;">${currentRankingFilter === 'points' ? `${top1.points.toFixed(1)} pts` : `${top1.km} km`}</div>
-        <div class="podium-block">1</div>
+        <div class="podium-name" style="color: #38bdf8; font-size: 0.9rem; font-weight: 800;">${top1.name} ${top1.isUser ? '(Você)' : ''}</div>
+        <div class="podium-pts" style="font-size: 0.8rem; color: #00d2ff; font-weight: 800;">${currentRankingFilter === 'points' ? `${top1.points.toFixed(1)} pts` : `${top1.km} km`}</div>
+        <div class="podium-block" style="border-top: 2px solid #00d2ff; box-shadow: inset 0 0 12px rgba(0,210,255,0.25);">1</div>
       </div>
 
       <!-- 3º LUGAR -->
@@ -3092,7 +3152,7 @@ function renderRankingView(animated = false) {
           <div class="podium-avatar" style="background: ${top3.avatarBg};">
             ${renderPodiumAvatar(top3)}
           </div>
-          <div class="podium-badge">🥉</div>
+          <div class="podium-badge" style="transform: scale(0.9);">${getRankBadgeHtml(top3.rankTier)}</div>
         </div>
         <div class="podium-name">${top3.name} ${top3.isUser ? '(Você)' : ''}</div>
         <div class="podium-pts">${currentRankingFilter === 'points' ? `${top3.points.toFixed(1)} pts` : `${top3.km} km`}</div>
@@ -3108,7 +3168,7 @@ function renderRankingView(animated = false) {
 
   let overtakeInfo = "";
   if (userRank === 1) {
-    overtakeInfo = `<span style="color: #f59e0b; font-weight: 800;">👑 VOCÊ É O TOP 1 MUNDIAL!</span>`;
+    overtakeInfo = `<span style="color: #00d2ff; font-weight: 900; text-shadow: 0 0 8px rgba(0,210,255,0.6);">⚡ VOCÊ É O RANK SS SUPREMO DO MUNDO!</span>`;
   } else if (userRank > 1) {
     const ahead = list[userRank - 2];
     if (currentRankingFilter === 'points') {
@@ -3122,26 +3182,29 @@ function renderRankingView(animated = false) {
   }
 
   if (userStickyEl) {
+    const isTop1 = userRank === 1;
     userStickyEl.innerHTML = `
-      <div class="user-rank-card">
+      <div class="user-rank-card ${isTop1 ? 'card-supreme-tier' : ''}">
         <div style="display: flex; align-items: center; gap: 10px;">
-          <div style="font-size: 1.4rem; font-weight: 900; color: var(--accent-green); min-width: 32px;">
+          <div style="font-size: 1.4rem; font-weight: 900; color: ${isTop1 ? '#00d2ff' : 'var(--accent-green)'}; min-width: 32px;">
             #${userRank}
           </div>
-          <div class="leader-avatar" style="width: 44px; height: 44px; border-color: var(--accent-green);">
+          <div class="leader-avatar" style="width: 44px; height: 44px; border-color: ${isTop1 ? '#00d2ff' : 'var(--accent-green)'};">
             ${renderPodiumAvatar(userItem)}
           </div>
           <div>
-            <div style="font-weight: 800; font-size: 0.95rem; color: #fff;">
-              ${userItem.name} <span style="font-size: 0.7rem; color: var(--accent-green); font-weight: 700;">(VOCÊ)</span>
+            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+              <span style="font-weight: 800; font-size: 0.95rem; color: #fff;">${userItem.name}</span>
+              <span style="font-size: 0.7rem; color: var(--accent-green); font-weight: 700;">(VOCÊ)</span>
+              ${getRankBadgeHtml(userItem.rankTier, userItem.isTop1Supreme)}
             </div>
-            <div style="font-size: 0.72rem; color: var(--text-muted);">
-              ${userItem.badge} Nível ${userItem.level} • ${overtakeInfo}
+            <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 3px;">
+              Nível ${userItem.level} • ${overtakeInfo}
             </div>
           </div>
         </div>
         <div style="text-align: right;">
-          <div style="font-size: 1.15rem; font-weight: 900; color: var(--accent-orange);">
+          <div style="font-size: 1.15rem; font-weight: 900; color: ${isTop1 ? '#00d2ff' : 'var(--accent-orange)'};">
             ${currentRankingFilter === 'points' ? `${userItem.points.toFixed(1)} pts` : `${userItem.km} km`}
           </div>
           <div style="font-size: 0.65rem; color: var(--text-muted);">Sua pontuação</div>
@@ -3155,35 +3218,39 @@ function renderRankingView(animated = false) {
   if (listEl) {
     listEl.innerHTML = list.map((item, idx) => {
       const rankNum = idx + 1;
-      let rankDisplay = `#${rankNum}`;
+      const rankDisplay = `#${rankNum}`;
       let rankClass = "";
-      if (rankNum === 1) { rankDisplay = "🥇"; rankClass = "top-1"; }
-      else if (rankNum === 2) { rankDisplay = "🥈"; rankClass = "top-2"; }
-      else if (rankNum === 3) { rankDisplay = "🥉"; rankClass = "top-3"; }
+      if (rankNum === 1) { rankClass = "top-1"; }
+      else if (rankNum === 2) { rankClass = "top-2"; }
+      else if (rankNum === 3) { rankClass = "top-3"; }
 
       const isMe = item.isUser;
+      const isSupreme = item.isTop1Supreme || item.rankTier === 'SS';
       const avatarHtml = item.photo 
         ? `<img src="${item.photo}" alt="${item.name}">` 
         : `<span style="color: #fff;">${item.name.charAt(0).toUpperCase()}</span>`;
 
       return `
-        <div class="leader-item ${isMe ? 'is-user' : ''}">
-          <div class="leader-rank-col ${rankClass}">${rankDisplay}</div>
+        <div class="leader-item ${isMe ? 'is-user' : ''} ${isSupreme ? 'card-supreme-tier' : ''}">
+          <div class="leader-rank-col ${rankClass}" style="${isSupreme ? 'color: #00d2ff; font-weight: 900;' : ''}">${rankDisplay}</div>
           <div class="leader-user-info">
-            <div class="leader-avatar" style="background: ${item.avatarBg || 'var(--bg-card)'};">
+            <div class="leader-avatar" style="background: ${item.avatarBg || 'var(--bg-card)'}; ${isSupreme ? 'border-color: #00d2ff;' : ''}">
               ${avatarHtml}
             </div>
             <div>
-              <div style="font-weight: 800; font-size: 0.88rem; color: ${isMe ? 'var(--accent-green)' : '#fff'};">
-                <span>${item.country}</span> ${item.name} ${isMe ? '<span style="font-size:0.68rem; color: var(--accent-green); font-weight:800;">(VOCÊ)</span>' : ''}
+              <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                <span style="font-weight: 800; font-size: 0.88rem; color: ${isSupreme ? '#38bdf8' : (isMe ? 'var(--accent-green)' : '#fff')};">
+                  <span>${item.country}</span> ${item.name} ${isMe ? '<span style="font-size:0.68rem; color: var(--accent-green); font-weight:800;">(VOCÊ)</span>' : ''}
+                </span>
+                ${getRankBadgeHtml(item.rankTier, item.isTop1Supreme)}
               </div>
-              <div style="font-size: 0.7rem; color: var(--text-muted);">
-                ${item.badge} Nível ${item.level} • ${item.rank}
+              <div style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">
+                Nível ${item.level} • ${item.rank}
               </div>
             </div>
           </div>
           <div class="leader-stats-col">
-            <div style="font-weight: 800; font-size: 0.95rem; color: var(--accent-orange);">
+            <div style="font-weight: 800; font-size: 0.95rem; color: ${isSupreme ? '#00d2ff' : 'var(--accent-orange)'};">
               ${currentRankingFilter === 'points' ? `${item.points.toFixed(1)} pts` : `${item.km} km`}
             </div>
             <div style="font-size: 0.65rem; color: var(--text-muted);">
@@ -3203,18 +3270,43 @@ function renderLevelsTiersView() {
     const isCurrent = l.level === STATE.currentLevel;
     const isUnlocked = STATE.totalPoints >= l.minPoints;
     const requiredHours = l.minPoints * 2;
+    const isSupreme = l.rankTier === 'SS';
 
     return `
-      <div class="card ${isCurrent ? 'card-highlight' : ''}" style="margin-bottom: 8px; padding: 12px 14px; opacity: ${isUnlocked ? '1' : '0.55'};">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
+      <div class="card ${isCurrent ? 'card-highlight' : ''} ${isSupreme ? 'card-supreme-tier' : ''}" style="margin-bottom: 8px; padding: 12px 14px; opacity: ${isUnlocked ? '1' : '0.6'};">
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
           <div style="display: flex; align-items: center; gap: 10px;">
-            <span style="font-size: 1.6rem;">${l.badge}</span>
+            ${getRankBadgeHtml(l.rankTier, isSupreme)}
             <div>
-              <div style="font-weight: 800; font-size: 0.95rem; color: ${isCurrent ? 'var(--accent-green)' : '#fff'};">
-                Nível ${l.level}: ${l.name} ${isCurrent ? '⭐ (VOCÊ ESTÁ AQUI)' : ''}
+              <div style="font-weight: 800; font-size: 0.95rem; color: ${isSupreme ? '#38bdf8' : (isCurrent ? 'var(--accent-green)' : '#fff')};">
+                Nível ${l.level}: ${l.name} ${isCurrent ? '⭐ (VOCÊ)' : ''}
               </div>
               <div style="font-size: 0.72rem; color: var(--text-muted);">${l.rank}</div>
             </div>
+          </div>
+          <div style="text-align: right; font-size: 0.75rem; white-space: nowrap;">
+            <div style="font-weight: 700; color: ${isSupreme ? '#00d2ff' : 'var(--accent-orange)'};">${l.minPoints} Pontos</div>
+            <div style="font-size: 0.65rem; color: var(--text-muted);">(${requiredHours}h de treino)</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Badges Grid
+  const badgesGrid = document.getElementById("badgesGrid");
+  if (!badgesGrid) return;
+  badgesGrid.innerHTML = STATE.badges.map(b => `
+    <div style="background: rgba(255,255,255,0.03); border: 1px solid ${b.unlocked ? 'var(--accent-green)' : 'var(--border-color)'}; border-radius: var(--radius-sm); padding: 10px; text-align: center; opacity: ${b.unlocked ? '1' : '0.45'};">
+      <div style="font-size: 1.8rem; margin-bottom: 4px;">${b.icon}</div>
+      <div style="font-size: 0.8rem; font-weight: 800; color: ${b.unlocked ? '#fff' : 'var(--text-muted)'};">${b.name}</div>
+      <div style="font-size: 0.68rem; color: var(--text-muted); margin-top: 2px;">${b.desc}</div>
+      <span style="display: inline-block; font-size: 0.62rem; margin-top: 6px; padding: 2px 6px; border-radius: 4px; background: ${b.unlocked ? 'rgba(16,185,129,0.2)' : 'rgba(255,255,255,0.05)'}; color: ${b.unlocked ? 'var(--accent-green)' : 'var(--text-muted)'};">
+        ${b.unlocked ? 'DESBLOQUEADO' : 'BLOQUEADO'}
+      </span>
+    </div>
+  `).join('');
+}
           </div>
           <div style="text-align: right; font-size: 0.75rem;">
             <div style="font-weight: 700; color: var(--accent-orange);">${l.minPoints} Pontos</div>
@@ -3315,16 +3407,18 @@ function generateDailyShareCard() {
   ctx.lineWidth = 2;
   roundRect(ctx, 40, 175, width - 80, 110, 16, true, true);
 
-  ctx.font = "55px system-ui";
-  ctx.fillText(currentLevelObj.badge, 65, 252);
+  // Hero Rank Badge
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "bold 36px 'Impact', system-ui";
+  ctx.fillText(currentLevelObj.rankTier || 'E', 75, 246);
 
   ctx.fillStyle = "#10b981";
   ctx.font = "bold 26px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto";
-  ctx.fillText(`NÍVEL ${currentLevelObj.level}: ${currentLevelObj.name.toUpperCase()}`, 145, 222);
+  ctx.fillText(`RANK ${currentLevelObj.rankTier}: ${currentLevelObj.name.toUpperCase()}`, 145, 222);
 
   ctx.fillStyle = "#cbd5e1";
   ctx.font = "18px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto";
-  ctx.fillText(`Patente: ${currentLevelObj.rank} • Pontos: ${STATE.totalPoints.toFixed(2)} pts`, 145, 256);
+  ctx.fillText(`Patente de Herói: ${currentLevelObj.rank} • Pontos: ${STATE.totalPoints.toFixed(2)} pts`, 145, 256);
 
   // Stats Grid 2x2
   const todayTotalMin = STATE.todaySessions.reduce((acc, s) => acc + s.durationMin, 0);
@@ -3430,7 +3524,7 @@ async function shareDailyCard() {
     canvas.toBlob(async (blob) => {
       const file = new File([blob], `treino-${getTodayDateStr()}.png`, { type: 'image/png' });
       const currentLevelObj = getLevelForPoints(STATE.totalPoints);
-      const text = `🔥 Treino de hoje concluído no IronLevel!\nNível ${currentLevelObj.level}: ${currentLevelObj.name}\nPontos Acumulados: ${STATE.totalPoints.toFixed(2)} pts\nSequência: ${STATE.streakDays} dias seguidos!`;
+      const text = `🔥 Treino pago no IronLevel!\nRank de Herói: [RANK ${currentLevelObj.rankTier}] ${currentLevelObj.name}\nPontos Acumulados: ${STATE.totalPoints.toFixed(2)} pts\nSequência: ${STATE.streakDays} dias seguidos!`;
       try {
         await navigator.share({
           title: "Meu Treino no IronLevel",
@@ -3457,12 +3551,12 @@ function copyShareText() {
 
   const text = `🔥 *TREINO PAGO - IRONLEVEL* 🔥\n` +
     `👤 *Atleta:* ${STATE.user.name}\n` +
-    `🏆 *Nível:* ${currentLevelObj.level} - ${currentLevelObj.name}\n` +
+    `⚡ *Rank de Herói:* [RANK ${currentLevelObj.rankTier}] ${currentLevelObj.name}\n` +
     `⭐ *Pontos:* ${STATE.totalPoints.toFixed(2)} pts (2h de treino = 1 pt)\n` +
     `⏱️ *Tempo Hoje:* ${todayTotalMin} minutos\n` +
     (todayKm > 0 ? `🏃‍♂️ *Corrida:* ${todayKm.toFixed(1)} km\n` : '') +
     `🔥 *Sequência:* ${STATE.streakDays} dias seguidos!\n` +
-    `Bora pra cima! Rumo ao próximo nível! 💪`;
+    `Bora pra cima! Rumo ao próximo Rank! 💪`;
 
   navigator.clipboard.writeText(text).then(() => {
     alert("Texto copiado para a área de transferência! Cole no WhatsApp ou Instagram!");
