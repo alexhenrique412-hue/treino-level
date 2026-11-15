@@ -1,5 +1,5 @@
 // IronLevel PWA Service Worker - Versão Auto-Atualizável
-const CACHE_NAME = 'ironlevel-v20';
+const CACHE_NAME = 'ironlevel-v21';
 const ASSETS = [
   './',
   './index.html',

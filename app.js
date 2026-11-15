@@ -136,11 +136,11 @@ const DEFAULT_WORKOUT_ROUTINES = {
     dayName: "Segunda-feira",
     title: "Peito & Tríceps",
     exercises: [
-      { id: "e1", name: "Supino Reto com Barra", sets: 4, reps: "8-10", weight: 40, rest: 60, notes: "Cadência controlada", done: false },
-      { id: "e2", name: "Supino Inclinado com Halteres", sets: 4, reps: "10-12", weight: 18, rest: 60, notes: "Amplitude máxima", done: false },
-      { id: "e3", name: "Crucifixo na Polia (Crossover)", sets: 3, reps: "12-15", weight: 15, rest: 45, notes: "Aperte 1s no pico", done: false },
-      { id: "e4", name: "Tríceps Corda na Polia", sets: 4, reps: "12-15", weight: 20, rest: 45, notes: "Abra a corda no final", done: false },
-      { id: "e5", name: "Tríceps Francês Halter", sets: 3, reps: "10-12", weight: 14, rest: 60, notes: "Cotovelos fechados", done: false }
+      { id: "e1", name: "Supino Reto com Barra", sets: 4, reps: "8-10", weight: 40, rest: 60, notes: "Cadência controlada na descida", done: false },
+      { id: "e2", name: "Supino Inclinado com Halteres", sets: 4, reps: "10-12", weight: 18, rest: 60, notes: "Amplitude máxima e peitoral aberto", done: false },
+      { id: "e3", name: "Crucifixo na Polia (Crossover)", sets: 3, reps: "12-15", weight: 15, rest: 45, notes: "Aperte 1s no pico de contração", done: false, isBiSet: true },
+      { id: "e4", name: "Tríceps Corda na Polia", sets: 4, reps: "12-15", weight: 20, rest: 45, notes: "Abra a corda no final do movimento", done: false, isBiSet: true },
+      { id: "e5", name: "Tríceps Francês Halter", sets: 3, reps: "10-12", weight: 14, rest: 60, notes: "Cotovelos fechados apontando para o teto", done: false }
     ]
   },
   1: { // Terça
@@ -160,8 +160,8 @@ const DEFAULT_WORKOUT_ROUTINES = {
     exercises: [
       { id: "e11", name: "Agachamento Livre", sets: 4, reps: "8-10", weight: 50, rest: 90, notes: "Desça até 90 graus ou mais", done: false },
       { id: "e12", name: "Leg Press 45°", sets: 4, reps: "10-12", weight: 120, rest: 90, notes: "Pés na largura dos ombros", done: false },
-      { id: "e13", name: "Cadeira Extensora", sets: 3, reps: "12-15", weight: 35, rest: 45, notes: "Segura 1s em cima", done: false },
-      { id: "e14", name: "Mesa Flexora", sets: 4, reps: "10-12", weight: 30, rest: 60, notes: "Posterior de coxa", done: false },
+      { id: "e13", name: "Cadeira Extensora", sets: 3, reps: "12-15", weight: 35, rest: 45, notes: "Segura 1s em cima e volta lento", done: false, isBiSet: true },
+      { id: "e14", name: "Mesa Flexora", sets: 4, reps: "10-12", weight: 30, rest: 60, notes: "Posterior de coxa em tensão constante", done: false, isBiSet: true },
       { id: "e15", name: "Panturrilha em Pé", sets: 4, reps: "15-20", weight: 40, rest: 45, notes: "Alongamento completo", done: false }
     ]
   },
@@ -676,17 +676,25 @@ function toggleWorkoutTimer() {
   if (!timerRunning) {
     timerRunning = true;
     requestScreenWakeLock();
-    document.getElementById("btnTimerStart").style.display = "none";
-    document.getElementById("btnTimerPause").style.display = "inline-flex";
-    document.getElementById("btnTimerFinish").style.display = "inline-flex";
-    document.getElementById("btnTimerReset").style.display = "inline-flex";
+    const btnStart = document.getElementById("btnTimerStart");
+    const btnPause = document.getElementById("btnTimerPause");
+    const btnFinish = document.getElementById("btnTimerFinish");
+    const btnReset = document.getElementById("btnTimerReset");
+    if (btnStart) btnStart.style.display = "none";
+    if (btnPause) btnPause.style.display = "inline-flex";
+    if (btnFinish) btnFinish.style.display = "inline-flex";
+    if (btnReset) btnReset.style.display = "inline-flex";
     
     timerInterval = setInterval(() => {
       timerSeconds++;
-      document.getElementById("liveTimerDisplay").innerText = formatSeconds(timerSeconds);
+      const disp = document.getElementById("liveTimerDisplay");
+      if (disp) disp.innerText = formatSeconds(timerSeconds);
       const estPoints = (timerSeconds / 7200).toFixed(2);
-      document.getElementById("timerPointsEstimate").innerText = `+${estPoints} pt`;
+      const ptEl = document.getElementById("timerPointsEstimate");
+      if (ptEl) ptEl.innerText = `+${estPoints} pt`;
+      updateActiveWorkoutBottomBar();
     }, 1000);
+    updateActiveWorkoutBottomBar();
   }
 }
 
@@ -695,25 +703,19 @@ function pauseWorkoutTimer() {
     clearInterval(timerInterval);
     timerRunning = false;
     releaseScreenWakeLock();
-    document.getElementById("btnTimerStart").style.display = "inline-flex";
-    document.getElementById("btnTimerStart").innerText = "▶ Continuar";
-    document.getElementById("btnTimerPause").style.display = "none";
+    const btnStart = document.getElementById("btnTimerStart");
+    const btnPause = document.getElementById("btnTimerPause");
+    if (btnStart) {
+      btnStart.style.display = "inline-flex";
+      btnStart.innerText = "▶ Continuar";
+    }
+    if (btnPause) btnPause.style.display = "none";
+    updateActiveWorkoutBottomBar();
   }
 }
 
 function finishWorkoutTimer() {
-  pauseWorkoutTimer();
-  releaseScreenWakeLock();
-  const minutes = Math.max(1, Math.round(timerSeconds / 60));
-  const dayRoutine = STATE.routines[STATE.activeDayIndex];
-  const typeName = dayRoutine ? dayRoutine.title : "Musculação";
-  
-  if (confirm(`Parabéns pelo treino! Duração: ${minutes} minutos. Registrar e somar pontos?`)) {
-    addTrainingMinutes(minutes, typeName);
-    sfx.playLevelUp();
-    resetWorkoutTimer();
-    switchTab('home');
-  }
+  finishWorkoutSessionPro();
 }
 
 function resetWorkoutTimer() {
@@ -721,13 +723,22 @@ function resetWorkoutTimer() {
   releaseScreenWakeLock();
   timerRunning = false;
   timerSeconds = 0;
-  document.getElementById("liveTimerDisplay").innerText = "00:00:00";
-  document.getElementById("timerPointsEstimate").innerText = "+0.0 pt";
-  document.getElementById("btnTimerStart").style.display = "inline-flex";
-  document.getElementById("btnTimerStart").innerText = "▶ Iniciar";
-  document.getElementById("btnTimerPause").style.display = "none";
-  document.getElementById("btnTimerFinish").style.display = "none";
-  document.getElementById("btnTimerReset").style.display = "none";
+  const disp = document.getElementById("liveTimerDisplay");
+  if (disp) disp.innerText = "00:00:00";
+  const ptEl = document.getElementById("timerPointsEstimate");
+  if (ptEl) ptEl.innerText = "+0.0 pt";
+  const btnStart = document.getElementById("btnTimerStart");
+  const btnPause = document.getElementById("btnTimerPause");
+  const btnFinish = document.getElementById("btnTimerFinish");
+  const btnReset = document.getElementById("btnTimerReset");
+  if (btnStart) {
+    btnStart.style.display = "inline-flex";
+    btnStart.innerText = "▶ Iniciar";
+  }
+  if (btnPause) btnPause.style.display = "none";
+  if (btnFinish) btnFinish.style.display = "none";
+  if (btnReset) btnReset.style.display = "none";
+  updateActiveWorkoutBottomBar();
 }
 
 // --- REST TIMER ---
@@ -3269,7 +3280,352 @@ function addNewWorkoutDivision() {
   }
 }
 
-// VIEW 1: RENDERIZA O TREINO DO DIA (ESTILO DA FOTO)
+// --- ENSURE EXERCISE HAS STRUCTURED SERIES (ESTILO METAFIT) ---
+function ensureExerciseSeries(ex) {
+  if (!ex.series || !Array.isArray(ex.series) || ex.series.length === 0) {
+    const numSets = parseInt(ex.sets) || 3;
+    const defaultReps = parseInt(ex.reps) || 12;
+    const defaultWeight = parseFloat(ex.weight) || 0;
+    ex.series = [];
+    for (let i = 1; i <= numSets; i++) {
+      ex.series.push({
+        setNum: i,
+        weight: defaultWeight,
+        reps: defaultReps,
+        prevWeight: defaultWeight,
+        prevReps: defaultReps,
+        prevRest: ex.rest || 60,
+        done: !!ex.done
+      });
+    }
+  }
+  return ex.series;
+}
+
+// Alternar Expandir/Recolher card do exercício
+function toggleExerciseExpand(exId) {
+  triggerHaptic('light');
+  const currentDay = (typeof STATE.activeDayIndex === 'number' && STATE.activeDayIndex >= 0) ? STATE.activeDayIndex : 0;
+  const routine = STATE.routines[currentDay];
+  if (!routine || !routine.exercises) return;
+  const ex = routine.exercises.find(e => e.id === exId);
+  if (ex) {
+    ex.isExpanded = (ex.isExpanded === false) ? true : false;
+    saveState();
+    renderWorkoutRoutineView();
+  }
+}
+
+// Concluir/Desmarcar série individual (SET-BY-SET TRACKING)
+function toggleSetDone(exId, setNum) {
+  const currentDay = (typeof STATE.activeDayIndex === 'number' && STATE.activeDayIndex >= 0) ? STATE.activeDayIndex : 0;
+  const routine = STATE.routines[currentDay];
+  if (!routine || !routine.exercises) return;
+  const ex = routine.exercises.find(e => e.id === exId);
+  if (!ex) return;
+  ensureExerciseSeries(ex);
+
+  const s = ex.series.find(item => item.setNum === setNum);
+  if (!s) return;
+
+  s.done = !s.done;
+
+  if (s.done) {
+    sfx.playDone();
+    triggerHaptic('success');
+    s.prevWeight = s.weight;
+    s.prevReps = s.reps;
+
+    // Dispara descanso automático configurado no exercício
+    startRestTimer(ex.rest || 60);
+
+    // Se o cronômetro do treino ainda não estiver rodando, inicia sozinho
+    if (!timerRunning) {
+      startWorkoutSessionPro(false);
+    }
+  } else {
+    triggerHaptic('light');
+  }
+
+  // Se todas as séries estiverem feitas, marca o exercício como concluído
+  ex.done = ex.series.every(item => item.done);
+
+  saveState();
+  renderWorkoutRoutineView();
+  updateActiveWorkoutBottomBar();
+}
+
+// Atualizar valor de Carga (kg) ou Reps de uma série
+function updateSetData(exId, setNum, field, val) {
+  const currentDay = (typeof STATE.activeDayIndex === 'number' && STATE.activeDayIndex >= 0) ? STATE.activeDayIndex : 0;
+  const routine = STATE.routines[currentDay];
+  if (!routine || !routine.exercises) return;
+  const ex = routine.exercises.find(e => e.id === exId);
+  if (!ex) return;
+  ensureExerciseSeries(ex);
+
+  const s = ex.series.find(item => item.setNum === setNum);
+  if (!s) return;
+
+  if (field === 'weight') {
+    s.weight = parseFloat(val) || 0;
+    ex.weight = s.weight;
+  } else if (field === 'reps') {
+    s.reps = parseInt(val) || 0;
+  }
+  saveState();
+  updateActiveWorkoutBottomBar();
+}
+
+// Adicionar mais uma série ao exercício (+ adicionar série)
+function addExerciseSet(exId) {
+  triggerHaptic('medium');
+  const currentDay = (typeof STATE.activeDayIndex === 'number' && STATE.activeDayIndex >= 0) ? STATE.activeDayIndex : 0;
+  const routine = STATE.routines[currentDay];
+  if (!routine || !routine.exercises) return;
+  const ex = routine.exercises.find(e => e.id === exId);
+  if (!ex) return;
+  ensureExerciseSeries(ex);
+
+  const nextNum = ex.series.length + 1;
+  const lastSet = ex.series[ex.series.length - 1] || { weight: ex.weight || 0, reps: 12, prevRest: ex.rest || 60 };
+
+  ex.series.push({
+    setNum: nextNum,
+    weight: lastSet.weight,
+    reps: lastSet.reps,
+    prevWeight: lastSet.weight,
+    prevReps: lastSet.reps,
+    prevRest: ex.rest || 60,
+    done: false
+  });
+  ex.sets = ex.series.length;
+  ex.isExpanded = true;
+
+  saveState();
+  renderWorkoutRoutineView();
+  updateActiveWorkoutBottomBar();
+}
+
+// INICIAR TREINO (Acompanha o treino sem complicação, sem filmar nada)
+function startWorkoutSessionPro(triggerVib = true) {
+  if (triggerVib) {
+    sfx.playLevelUp();
+    triggerHaptic('heavy');
+  }
+  if (!timerRunning) {
+    toggleWorkoutTimer();
+  }
+
+  // Garante que todos os exercícios do treino fiquem abertos prontos para anotar as séries
+  const currentDay = (typeof STATE.activeDayIndex === 'number' && STATE.activeDayIndex >= 0) ? STATE.activeDayIndex : 0;
+  const routine = STATE.routines[currentDay];
+  if (routine && routine.exercises) {
+    routine.exercises.forEach(e => {
+      ensureExerciseSeries(e);
+      e.isExpanded = true;
+    });
+    saveState();
+  }
+
+  renderWorkoutRoutineView();
+  updateActiveWorkoutBottomBar();
+
+  // Scroll suave para o primeiro exercício
+  const container = document.getElementById("exerciseListContainer");
+  if (container) {
+    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+// FINALIZAR TREINO PRO
+function finishWorkoutSessionPro() {
+  pauseWorkoutTimer();
+  releaseScreenWakeLock();
+
+  const currentDay = (typeof STATE.activeDayIndex === 'number' && STATE.activeDayIndex >= 0) ? STATE.activeDayIndex : 0;
+  const routine = STATE.routines[currentDay];
+  const minutes = Math.max(1, Math.round(timerSeconds / 60));
+
+  let totalSeries = 0;
+  let completedSeries = 0;
+  let totalVolumeKg = 0;
+
+  (routine.exercises || []).forEach(ex => {
+    ensureExerciseSeries(ex);
+    ex.series.forEach(s => {
+      totalSeries++;
+      if (s.done) {
+        completedSeries++;
+        totalVolumeKg += ((s.weight || 0) * (s.reps || 0));
+        s.prevWeight = s.weight;
+        s.prevReps = s.reps;
+      }
+      s.done = false;
+    });
+    ex.done = false;
+  });
+
+  const promptMsg = `🏁 Finalizar ${routine.title || 'Treino'}?\n\n` +
+    `⏱️ Duração: ${minutes} minutos\n` +
+    `💪 Séries Feitas: ${completedSeries} de ${totalSeries}\n` +
+    (totalVolumeKg > 0 ? `🏋️ Volume Levantado: ${totalVolumeKg.toLocaleString('pt-BR')} kg\n\n` : '\n') +
+    `Registrar e somar pontos de Level Up?`;
+
+  if (confirm(promptMsg)) {
+    addTrainingMinutes(minutes, routine.title || "Musculação");
+    sfx.playLevelUp();
+    resetWorkoutTimer();
+    saveState();
+    updateActiveWorkoutBottomBar();
+    switchTab('home');
+  } else {
+    toggleWorkoutTimer();
+  }
+}
+
+// ATUALIZAR BARRA FIXA INFERIOR DO TREINO EM ANDAMENTO
+function updateActiveWorkoutBottomBar() {
+  const bar = document.getElementById("activeWorkoutBar");
+  const footerBtn = document.getElementById("startWorkoutFooter");
+  if (!bar) return;
+
+  const currentDay = (typeof STATE.activeDayIndex === 'number' && STATE.activeDayIndex >= 0) ? STATE.activeDayIndex : 0;
+  const routine = STATE.routines ? STATE.routines[currentDay] : null;
+  if (!routine) return;
+
+  let totalSeries = 0;
+  let completedSeries = 0;
+  (routine.exercises || []).forEach(ex => {
+    ensureExerciseSeries(ex);
+    ex.series.forEach(s => {
+      totalSeries++;
+      if (s.done) completedSeries++;
+    });
+  });
+
+  const pct = totalSeries > 0 ? Math.round((completedSeries / totalSeries) * 100) : 0;
+
+  if (timerRunning) {
+    bar.style.display = "flex";
+    if (footerBtn) footerBtn.style.display = "none";
+  } else {
+    bar.style.display = "none";
+    if (footerBtn) footerBtn.style.display = "block";
+  }
+
+  const titleBadge = document.getElementById("activeWorkoutTitleBadge");
+  const timerDisp = document.getElementById("activeWorkoutTimerDisplay");
+  const progText = document.getElementById("activeWorkoutProgressText");
+
+  const letters = ["A", "B", "C", "D", "E", "F", "G"];
+  const letter = letters[currentDay] || (currentDay + 1);
+
+  if (titleBadge) titleBadge.innerText = `TREINO ${letter} · EM ANDAMENTO`;
+  if (timerDisp) timerDisp.innerText = formatSeconds(timerSeconds);
+  if (progText) progText.innerText = `${completedSeries}/${totalSeries} SÉRIES · ${pct}%`;
+}
+
+// RENDERIZAR CARD INDIVIDUAL METAFIT COM TABELA DE SÉRIES
+function renderExerciseCardMetaFit(ex, idx, isInsideBiset) {
+  ensureExerciseSeries(ex);
+  const muscle = ex.muscle || detectMuscleForExercise(ex.name, ex.notes);
+  const targetLabel = getMuscleTargetName(muscle);
+  const svgThumb = renderMuscleThumbnailSvg(muscle);
+  const isExpanded = (ex.isExpanded !== false);
+
+  const totalSets = ex.series.length;
+  const completedSets = ex.series.filter(s => s.done).length;
+
+  const seriesRowsHtml = ex.series.map(s => {
+    const isChecked = !!s.done;
+    const prevText = (s.prevWeight > 0 || s.prevReps > 0)
+      ? `${s.prevWeight}kg × ${s.prevReps} ⏱️ ${s.prevRest || ex.rest || 60}s`
+      : `Novo · ${ex.rest || 60}s`;
+
+    return `
+      <div class="set-row ${isChecked ? 'set-completed' : ''}">
+        <span class="set-num-badge">${s.setNum}</span>
+        <span class="set-prev-record" title="Desempenho na última vez">${prevText}</span>
+        <div class="set-input-wrap">
+          <input type="number" step="0.5" class="set-input-field" value="${s.weight}" 
+            onchange="updateSetData('${ex.id}', ${s.setNum}, 'weight', this.value)"
+            onfocus="this.select()" title="Carga em kg" />
+        </div>
+        <div class="set-input-wrap wrap-reps">
+          <input type="number" class="set-input-field" value="${s.reps}" 
+            onchange="updateSetData('${ex.id}', ${s.setNum}, 'reps', this.value)"
+            onfocus="this.select()" title="Repetições feitas" />
+        </div>
+        <button class="btn-set-check ${isChecked ? 'checked' : ''}" 
+          onclick="toggleSetDone('${ex.id}', ${s.setNum})" title="Concluir Série">
+          ${isChecked ? '✓' : ''}
+        </button>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="exercise-card-metafit ${ex.isBiSet ? 'is-biset' : ''}" id="ex-card-${ex.id}">
+      <div class="exercise-metafit-header" onclick="toggleExerciseExpand('${ex.id}')">
+        <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;">
+          <span class="exercise-order-num">${idx + 1}</span>
+          <div class="exercise-thumb-mini" title="Foco Anatômico: ${targetLabel}">
+            ${svgThumb}
+          </div>
+          <div style="min-width: 0; flex: 1;">
+            <div class="exercise-metafit-title">
+              ${ex.name}
+              ${ex.isBiSet && !isInsideBiset ? '<span class="badge-biset-tag">BI-SET</span>' : ''}
+            </div>
+            <div class="exercise-metafit-muscle">
+              ${targetLabel} · <strong>${completedSets}/${totalSets}</strong> séries concluídas
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="expand-chevron" style="transform: ${isExpanded ? 'rotate(180deg)' : 'rotate(0deg)'};">▼</span>
+        </div>
+      </div>
+
+      <div class="exercise-metafit-body" style="display: ${isExpanded ? 'block' : 'none'};">
+        <div class="sets-table-header">
+          <span style="width: 32px; text-align: center;">SET</span>
+          <span style="flex: 1.4; text-align: left; padding-left: 2px;">ANTERIOR</span>
+          <span style="width: 65px; text-align: center;">CARGA KG</span>
+          <span style="width: 55px; text-align: center;">REPS</span>
+          <span style="width: 36px; text-align: center;">✓</span>
+        </div>
+
+        <div class="sets-rows-container">
+          ${seriesRowsHtml}
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+          <button class="btn-add-set" onclick="addExerciseSet('${ex.id}')">
+            + adicionar série
+          </button>
+          <div style="display: flex; gap: 6px;">
+            <button class="btn-icon-xs" onclick="toggleExerciseBiSet('${ex.id}')" title="Alternar Bi-Set">
+              ${ex.isBiSet ? '⚡ Bi-Set Ativo' : '⚡ Bi-Set'}
+            </button>
+            <button class="btn-icon-xs" onclick="openEditExerciseModal('${ex.id}')" title="Editar">✏️</button>
+            <button class="btn-icon-xs" onclick="deleteExercise('${ex.id}')" title="Excluir">🗑️</button>
+          </div>
+        </div>
+
+        ${ex.notes ? `
+          <div class="trainer-note-box">
+            <div class="trainer-note-label">🎯 OBSERVAÇÃO DO TREINADOR</div>
+            <div class="trainer-note-text">${ex.notes}</div>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+}
+
+// VIEW 1: RENDERIZA O TREINO DO DIA (ESTILO METAFIT)
 function renderWorkoutRoutineView() {
   const currentDay = (typeof STATE.activeDayIndex === 'number' && STATE.activeDayIndex >= 0) ? STATE.activeDayIndex : 0;
   if (!STATE.routines) STATE.routines = JSON.parse(JSON.stringify(DEFAULT_WORKOUT_ROUTINES));
@@ -3310,15 +3666,21 @@ function renderWorkoutRoutineView() {
   const estTimeText = document.getElementById("workoutEstimatedTimeText");
 
   const exList = routine.exercises || [];
-  const estMinutes = Math.max(20, Math.round(exList.length * 9));
+  let totalSetsCount = 0;
+  exList.forEach(e => {
+    ensureExerciseSeries(e);
+    totalSetsCount += e.series.length;
+  });
+
+  const estMinutes = Math.max(20, Math.round(totalSetsCount * 2.5));
 
   if (labelEl) labelEl.innerText = routine.dayName || "Divisão";
   if (titleEl) titleEl.innerText = routine.title || "Meu Treino";
   if (countEl) countEl.innerText = exList.length;
-  if (exCountText) exCountText.innerText = `${exList.length} exercícios`;
+  if (exCountText) exCountText.innerText = `${exList.length} exercícios (${totalSetsCount} séries)`;
   if (estTimeText) estTimeText.innerText = `~${estMinutes} min`;
 
-  // 3. Exercise Cards com visual da foto (thumbnail anatômica, dots, bi-set)
+  // 3. Exercise Cards MetaFit
   const container = document.getElementById("exerciseListContainer");
   if (!container) return;
 
@@ -3338,51 +3700,37 @@ function renderWorkoutRoutineView() {
         </div>
       </div>
     `;
+    updateActiveWorkoutBottomBar();
     return;
   }
 
-  container.innerHTML = exList.map(ex => {
-    const muscle = ex.muscle || detectMuscleForExercise(ex.name, ex.notes);
-    const targetLabel = getMuscleTargetName(muscle);
-    const svgThumb = renderMuscleThumbnailSvg(muscle);
-    const isBiset = !!ex.isBiSet;
+  // Agrupamento Inteligente de Bi-Sets
+  let cardsHtml = '';
+  let i = 0;
+  while (i < exList.length) {
+    const currentEx = exList[i];
+    const nextEx = exList[i + 1];
 
-    return `
-      <div class="exercise-card-pro ${isBiset ? 'is-biset' : ''} ${ex.done ? 'done' : ''}">
-        <div class="drag-handle-dots" title="Ordem do exercício">:::</div>
-        
-        <!-- Thumbnail da Anatomia com Músculo Alvo em Destaque Vermelho -->
-        <div class="exercise-thumb-box" title="Foco Anatômico: ${targetLabel}">
-          ${svgThumb}
+    if (currentEx.isBiSet && nextEx && nextEx.isBiSet) {
+      cardsHtml += `
+        <div class="biset-group-card">
+          <div class="biset-group-header">
+            <span class="biset-tag-pill">BI-SET</span>
+            <span>2 exercícios emendados sem pausa · descanso ao fim do bloco</span>
+          </div>
+          ${renderExerciseCardMetaFit(currentEx, i, true)}
+          ${renderExerciseCardMetaFit(nextEx, i + 1, true)}
         </div>
+      `;
+      i += 2;
+    } else {
+      cardsHtml += renderExerciseCardMetaFit(currentEx, i, false);
+      i++;
+    }
+  }
 
-        <div class="exercise-info-pro">
-          <div class="exercise-title-pro">
-            ${ex.name}
-            ${isBiset ? '<span class="badge-biset-tag">BI-SET</span>' : ''}
-          </div>
-          <div class="exercise-meta-pro">
-            <strong>${ex.sets}</strong> × <strong>${ex.reps}</strong> · <strong>${ex.rest || 60}s</strong> ${ex.weight > 0 ? `· <strong>${ex.weight} kg</strong>` : ''}
-          </div>
-          <div class="muscle-target-badge">
-            🎯 ${targetLabel}
-          </div>
-          ${ex.notes ? `<div style="font-size: 0.68rem; color: #94a3b8; margin-top: 3px;">💡 ${ex.notes}</div>` : ''}
-        </div>
-
-        <div class="exercise-actions-pro">
-          <button class="action-check-btn ${ex.done ? 'checked' : ''}" onclick="toggleExerciseDone('${ex.id}')" title="Marcar concluído">
-            ${ex.done ? '✓' : ''}
-          </button>
-          <div style="display: flex; gap: 4px; margin-top: 2px;">
-            <button class="btn-icon" style="width: 24px; height: 24px; font-size: 0.65rem;" onclick="toggleExerciseBiSet('${ex.id}')" title="Alternar Bi-Set">⚡</button>
-            <button class="btn-icon" style="width: 24px; height: 24px; font-size: 0.65rem;" onclick="openEditExerciseModal('${ex.id}')" title="Editar">✏️</button>
-            <button class="btn-icon" style="width: 24px; height: 24px; font-size: 0.65rem;" onclick="deleteExercise('${ex.id}')" title="Excluir">🗑️</button>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join('');
+  container.innerHTML = cardsHtml;
+  updateActiveWorkoutBottomBar();
 }
 
 // VIEW 2: GUIA DE MÚSCULOS & EXERCÍCIOS
