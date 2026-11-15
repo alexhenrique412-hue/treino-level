@@ -34,6 +34,9 @@
         </div>
       </div>
       <div style="display: flex; align-items: center; gap: 6px;">
+        <div class="header-community-pill" id="headerCommunityPill" onclick="switchTab('levels')" title="Total de guerreiros cadastrados no app">
+          <span>👥</span> <span id="headerCommunityCount">3.428</span>
+        </div>
         <button class="btn btn-outline" id="headerInstallBtn" style="padding: 4px 8px; font-size: 0.72rem; border-color: var(--accent-green); color: var(--accent-green); display: flex; align-items: center; gap: 4px;" onclick="openInstallModal()">
           <span>📲</span> Instalar
         </button>
@@ -586,6 +589,31 @@
 
       <!-- VIEW A: RANKING MUNDIAL -->
       <div id="subtab-ranking-view">
+        <!-- Community Counter Banner (Quantas pessoas estão no app) -->
+        <div class="community-stats-bar">
+          <div class="community-stat-item">
+            <span class="community-stat-icon">👥</span>
+            <div>
+              <div class="community-stat-number" id="rankingCommunityCount">3.428</div>
+              <div class="community-stat-label">Atletas no App</div>
+            </div>
+          </div>
+          <div class="community-stat-item">
+            <span class="community-stat-icon">🟢</span>
+            <div>
+              <div class="community-stat-number" id="rankingActiveNowCount">184</div>
+              <div class="community-stat-label">Treinando Agora</div>
+            </div>
+          </div>
+          <div class="community-stat-item">
+            <span class="community-stat-icon">🌎</span>
+            <div>
+              <div class="community-stat-number">14 Países</div>
+              <div class="community-stat-label">Comunidade Global</div>
+            </div>
+          </div>
+        </div>
+
         <!-- Filter Bar -->
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
           <div style="display: flex; gap: 6px;">
@@ -967,10 +995,41 @@
           <small style="color: var(--text-dark); font-size: 0.68rem;">Dica: Toque na foto ou no botão para escolher da galeria</small>
         </div>
 
+        <div id="profileMemberBadge" style="text-align: center; margin-bottom: 12px; font-size: 0.75rem; color: #38bdf8; background: rgba(0,210,255,0.1); border: 1px solid rgba(0,210,255,0.25); border-radius: 20px; padding: 5px 12px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+          <span>👥</span> <span id="profileMemberText">Guerreiro Oficial #3.428 no App</span>
+        </div>
+
         <div class="form-group">
           <label>Seu Nome / Apelido</label>
           <input type="text" id="profileNameInput" required value="Guerreiro" oninput="updateModalAvatarLetter()">
         </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1.4fr; gap: 10px; margin-bottom: 14px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>Idade</label>
+            <input type="number" id="profileAgeInput" placeholder="Ex: 24" min="12" max="100" style="width: 100%;">
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label>País</label>
+            <select id="profileCountryInput" style="width: 100%;">
+              <option value="Brasil|🇧🇷">🇧🇷 Brasil</option>
+              <option value="Portugal|🇵🇹">🇵🇹 Portugal</option>
+              <option value="Estados Unidos|🇺🇸">🇺🇸 EUA</option>
+              <option value="Japão|🇯🇵">🇯🇵 Japão</option>
+              <option value="Espanha|🇪🇸">🇪🇸 Espanha</option>
+              <option value="Argentina|🇦🇷">🇦🇷 Argentina</option>
+              <option value="Reino Unido|🇬🇧">🇬🇧 Reino Unido</option>
+              <option value="Itália|🇮🇹">🇮🇹 Itália</option>
+              <option value="França|🇫🇷">🇫🇷 França</option>
+              <option value="Alemanha|🇩🇪">🇩🇪 Alemanha</option>
+              <option value="Canadá|🇨🇦">🇨🇦 Canadá</option>
+              <option value="Angola|🇦🇴">🇦🇴 Angola</option>
+              <option value="Moçambique|🇲🇿">🇲🇿 Moçambique</option>
+              <option value="Outro|🌐">🌐 Outro</option>
+            </select>
+          </div>
+        </div>
+
         <div class="form-group">
           <label>Meta Principal</label>
           <select id="profileGoalInput">
@@ -981,6 +1040,9 @@
           </select>
         </div>
         <button type="submit" class="btn btn-primary btn-full">Salvar Perfil</button>
+        <button type="button" class="btn btn-outline btn-full" style="margin-top: 8px; font-size: 0.75rem;" onclick="closeProfileModal(); openOnboardingModal(true);">
+          📋 Ver / Editar Tela de Cadastro
+        </button>
         
         <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border-color); text-align: center;">
           <div style="font-size: 0.72rem; color: var(--accent-green); display: flex; align-items: center; justify-content: center; gap: 5px;">
@@ -1320,6 +1382,122 @@
       <button class="btn btn-primary btn-full" onclick="closeSeasonResetModal()">
         🔥 Iniciar Temporada e Subir Rank!
       </button>
+    </div>
+  </div>
+
+  <!-- MODAL: ONBOARDING / TELA DE CADASTRO PRIMEIRO ACESSO -->
+  <div class="onboarding-overlay" id="onboardingModal" style="display: none;">
+    <div class="onboarding-box">
+      
+      <!-- Top Hero -->
+      <div class="onboarding-hero">
+        <div class="onboarding-badge">⚡ SISTEMA OFICIAL · IRONLEVEL</div>
+        <h1 class="onboarding-title">BEM-VINDO À <span>ARENA</span></h1>
+        <p class="onboarding-sub">
+          Cadastre seu perfil de guerreiro para entrar no sistema e começar sua evolução de nível!
+        </p>
+
+        <!-- Contador de Pessoas no App -->
+        <div class="community-counter-badge" id="onbCommunityBadge">
+          <span class="pulse-green-dot"></span>
+          <span>👥 <strong id="onbCommunityCounterNumber">3.428</strong> atletas já estão no app</span>
+        </div>
+      </div>
+
+      <!-- Formulário de Cadastro -->
+      <form class="onboarding-form" id="onboardingForm" onsubmit="handleCompleteOnboarding(event)">
+        
+        <!-- Campo: Nome / Apelido -->
+        <div class="onb-field">
+          <label class="onb-label" for="onbNameInput">
+            <span>🏷️ Seu Nome ou Apelido de Treino</span>
+            <small>*obrigatório</small>
+          </label>
+          <input type="text" id="onbNameInput" class="onb-input" placeholder="Ex: Samurai, Victor, Alex..." required maxlength="25" autocomplete="name">
+        </div>
+
+        <!-- Linha: Idade e País -->
+        <div class="onb-row">
+          <div class="onb-field">
+            <label class="onb-label" for="onbAgeInput">
+              <span>🎂 Idade</span>
+              <small>*obrigatório</small>
+            </label>
+            <input type="number" id="onbAgeInput" class="onb-input" placeholder="Ex: 24" required min="10" max="110">
+          </div>
+
+          <div class="onb-field">
+            <label class="onb-label" for="onbCountrySelect">
+              <span>🌎 Seu País</span>
+              <small>*obrigatório</small>
+            </label>
+            <select id="onbCountrySelect" class="onb-select" required onchange="handleOnbCountryChange(this.value)">
+              <option value="Brasil|🇧🇷" selected>🇧🇷 Brasil</option>
+              <option value="Portugal|🇵🇹">🇵🇹 Portugal</option>
+              <option value="Estados Unidos|🇺🇸">🇺🇸 EUA</option>
+              <option value="Japão|🇯🇵">🇯🇵 Japão</option>
+              <option value="Espanha|🇪🇸">🇪🇸 Espanha</option>
+              <option value="Argentina|🇦🇷">🇦🇷 Argentina</option>
+              <option value="Reino Unido|🇬🇧">🇬🇧 Reino Unido</option>
+              <option value="Itália|🇮🇹">🇮🇹 Itália</option>
+              <option value="França|🇫🇷">🇫🇷 França</option>
+              <option value="Alemanha|🇩🇪">🇩🇪 Alemanha</option>
+              <option value="Canadá|🇨🇦">🇨🇦 Canadá</option>
+              <option value="Angola|🇦🇴">🇦🇴 Angola</option>
+              <option value="Moçambique|🇲🇿">🇲🇿 Moçambique</option>
+              <option value="Chile|🇨🇱">🇨🇱 Chile</option>
+              <option value="Outro|🌐">🌐 Outro País</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Campo customizado se escolher Outro País -->
+        <div class="onb-field" id="onbOtherCountryWrap" style="display: none;">
+          <label class="onb-label" for="onbOtherCountryInput">
+            <span>🏳️ Nome do Seu País</span>
+          </label>
+          <input type="text" id="onbOtherCountryInput" class="onb-input" placeholder="Digite o nome do seu país">
+        </div>
+
+        <!-- Meta Principal -->
+        <div class="onb-field">
+          <label class="onb-label">
+            <span>🎯 Qual seu foco principal?</span>
+          </label>
+          <div class="onb-goals-grid">
+            <div class="onb-goal-card active" onclick="selectOnbGoal(this, 'Hipertrofia')">
+              <input type="radio" name="onbGoal" value="Hipertrofia" checked>
+              <div class="goal-icon">💪</div>
+              <div class="goal-title">Hipertrofia</div>
+            </div>
+            <div class="onb-goal-card" onclick="selectOnbGoal(this, 'Definição')">
+              <input type="radio" name="onbGoal" value="Definição">
+              <div class="goal-icon">🔥</div>
+              <div class="goal-title">Definição</div>
+            </div>
+            <div class="onb-goal-card" onclick="selectOnbGoal(this, 'Força & Performance')">
+              <input type="radio" name="onbGoal" value="Força & Performance">
+              <div class="goal-icon">⚡</div>
+              <div class="goal-title">Força Pura</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Info do Registro -->
+        <div class="onb-info-box">
+          <span style="font-size: 1.3rem;">🛡️</span>
+          <div>
+            <strong>Identificação no Ranking Oficial</strong><br>
+            Ao entrar, você será cadastrado como o atleta <strong id="onbNextMemberNumber" style="color: #00d2ff;">#3.429</strong> do aplicativo!
+          </div>
+        </div>
+
+        <!-- Botão Entrar -->
+        <button type="submit" class="btn-onboarding-submit" id="btnOnbSubmit">
+          <span>⚔️ ENTRAR NO APP & COMEÇAR</span>
+        </button>
+
+      </form>
     </div>
   </div>
 

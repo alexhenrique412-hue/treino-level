@@ -221,10 +221,15 @@ const BADGES = [
 const STATE = {
   user: {
     name: "Guerreiro",
+    age: null,
+    country: "Brasil",
+    countryFlag: "🇧🇷",
     goal: "Hipertrofia",
     avatar: "G",
     photo: null,
-    theme: "green"
+    theme: "green",
+    registered: false,
+    memberNumber: null
   },
   // All-time totals:
   totalMinutes: 0, // Minutes trained (2h = 120min = 1 point)
@@ -2855,8 +2860,28 @@ function renderModalAvatarPreview() {
 function openProfileModal() {
   triggerHaptic('light');
   tempProfilePhoto = STATE.user.photo || null;
-  document.getElementById("profileNameInput").value = STATE.user.name;
-  document.getElementById("profileGoalInput").value = STATE.user.goal;
+  document.getElementById("profileNameInput").value = STATE.user.name || "";
+  document.getElementById("profileGoalInput").value = STATE.user.goal || "Hipertrofia";
+  
+  const ageInput = document.getElementById("profileAgeInput");
+  if (ageInput) ageInput.value = STATE.user.age || "";
+
+  const countryInput = document.getElementById("profileCountryInput");
+  if (countryInput && STATE.user.country) {
+    for (let i = 0; i < countryInput.options.length; i++) {
+      if (countryInput.options[i].value.startsWith(STATE.user.country)) {
+        countryInput.selectedIndex = i;
+        break;
+      }
+    }
+  }
+
+  const memberText = document.getElementById("profileMemberText");
+  if (memberText) {
+    const num = STATE.user.memberNumber || getCommunityUsersCount();
+    memberText.innerText = `Guerreiro Oficial #${num.toLocaleString('pt-BR')} no App`;
+  }
+
   renderModalAvatarPreview();
   document.getElementById("profileModal").classList.add("open");
 }
@@ -2871,16 +2896,40 @@ function handleSaveProfile(e) {
   e.preventDefault();
   const name = document.getElementById("profileNameInput").value.trim() || "Guerreiro";
   const goal = document.getElementById("profileGoalInput").value;
+  const ageInput = document.getElementById("profileAgeInput");
+  const age = ageInput ? parseInt(ageInput.value, 10) : null;
+  
+  const countryInput = document.getElementById("profileCountryInput");
+  let countryName = STATE.user.country || "Brasil";
+  let countryFlag = STATE.user.countryFlag || "🇧🇷";
+  if (countryInput && countryInput.value) {
+    const parts = countryInput.value.split("|");
+    countryName = parts[0] || countryName;
+    countryFlag = parts[1] || countryFlag;
+  }
+
   STATE.user.name = name;
   STATE.user.goal = goal;
+  if (age) STATE.user.age = age;
+  STATE.user.country = countryName;
+  STATE.user.countryFlag = countryFlag;
   STATE.user.avatar = name.charAt(0).toUpperCase();
   STATE.user.photo = tempProfilePhoto;
+  STATE.user.registered = true;
+  if (!STATE.user.memberNumber) {
+    let cur = getCommunityUsersCount();
+    cur++;
+    localStorage.setItem('ironlevel_community_users_count', cur);
+    STATE.user.memberNumber = cur;
+  }
+
   updateCachedUserPhoto();
   saveState();
   closeProfileModal();
   triggerHaptic('success');
   sfx.playCheck();
   renderAll();
+  updateAllCommunityCounters();
 }
 
 // --- LEVEL UP CELEBRATION MODAL & CONFETTI ---
@@ -3000,8 +3049,14 @@ function renderHeader() {
     avatarEl.innerHTML = (STATE.user && STATE.user.avatar) ? STATE.user.avatar : "G";
   }
   const currentLevelObjHeader = getLevelForPoints(STATE.totalPoints);
-  document.getElementById("headerUserName").innerHTML = `${STATE.user.name} <span class="level-tag" id="headerLevelTag">RANK ${currentLevelObjHeader.rankTier || 'E'} • NV ${STATE.currentLevel}</span>`;
-  document.getElementById("headerStreakCount").innerText = STATE.streakDays || 1;
+  const flag = (STATE.user && STATE.user.countryFlag) ? `<span style="margin-right: 4px;">${STATE.user.countryFlag}</span>` : '';
+  const userNameEl = document.getElementById("headerUserName");
+  if (userNameEl) {
+    userNameEl.innerHTML = `${flag}${STATE.user.name} <span class="level-tag" id="headerLevelTag">RANK ${currentLevelObjHeader.rankTier || 'E'} • NV ${STATE.currentLevel}</span>`;
+  }
+  const streakEl = document.getElementById("headerStreakCount");
+  if (streakEl) streakEl.innerText = STATE.streakDays || 1;
+  updateAllCommunityCounters();
 }
 
 function renderHomeTab() {
@@ -4085,7 +4140,7 @@ function getGlobalLeaderboardList() {
     id: "user_me",
     isUser: true,
     name: STATE.user.name || "Guerreiro",
-    country: "🇧🇷",
+    country: (STATE.user && STATE.user.countryFlag) ? STATE.user.countryFlag : "🇧🇷",
     level: STATE.currentLevel,
     rank: currentLevelObj.rank,
     rankTier: currentLevelObj.rankTier || "E",
@@ -4576,6 +4631,226 @@ function renderAll() {
   renderWorkoutTab();
   renderRunningTab();
   renderLevelsTab();
+  updateAllCommunityCounters();
+}
+
+// --- SISTEMA DE CADASTRO (ONBOARDING) E CONTADOR DA COMUNIDADE ---
+const BASE_COMMUNITY_USERS = 3428;
+
+function getCommunityUsersCount() {
+  const saved = localStorage.getItem('ironlevel_community_users_count');
+  if (saved) {
+    const val = parseInt(saved, 10);
+    if (!isNaN(val) && val >= BASE_COMMUNITY_USERS) return val;
+  }
+  const count = BASE_COMMUNITY_USERS + (STATE.user && STATE.user.registered ? 1 : 0);
+  return count;
+}
+
+function updateAllCommunityCounters() {
+  const count = getCommunityUsersCount();
+  const countFormatted = count.toLocaleString('pt-BR');
+
+  // 1. Header Pill
+  const headerCountEl = document.getElementById("headerCommunityCount");
+  if (headerCountEl) headerCountEl.innerText = countFormatted;
+
+  // 2. Ranking Tab Counter
+  const rankingCountEl = document.getElementById("rankingCommunityCount");
+  if (rankingCountEl) rankingCountEl.innerText = countFormatted;
+
+  // 3. Atletas Treinando Agora (dinâmico com horário)
+  const activeNowEl = document.getElementById("rankingActiveNowCount");
+  if (activeNowEl) {
+    const hour = new Date().getHours();
+    const bonus = (hour >= 17 && hour <= 21) ? 58 : (hour >= 6 && hour <= 9 ? 34 : 12);
+    activeNowEl.innerText = (175 + bonus).toString();
+  }
+
+  // 4. Modal de Onboarding / Cadastro
+  const onbCounterEl = document.getElementById("onbCommunityCounterNumber");
+  if (onbCounterEl) onbCounterEl.innerText = countFormatted;
+
+  const onbNextEl = document.getElementById("onbNextMemberNumber");
+  if (onbNextEl) {
+    const nextNum = (STATE.user && STATE.user.memberNumber) ? STATE.user.memberNumber : (count + (STATE.user && STATE.user.registered ? 0 : 1));
+    onbNextEl.innerText = `#${nextNum.toLocaleString('pt-BR')}`;
+  }
+
+  // 5. Badge no Modal de Perfil
+  const profileMemberText = document.getElementById("profileMemberText");
+  if (profileMemberText) {
+    const num = (STATE.user && STATE.user.memberNumber) ? STATE.user.memberNumber : count;
+    profileMemberText.innerText = `Guerreiro Oficial #${num.toLocaleString('pt-BR')} no App`;
+  }
+}
+
+function openOnboardingModal(forceEdit = false) {
+  triggerHaptic('light');
+  const modal = document.getElementById("onboardingModal");
+  if (!modal) return;
+
+  // Pre-popula campos se já existirem
+  const nameInput = document.getElementById("onbNameInput");
+  const ageInput = document.getElementById("onbAgeInput");
+  const countrySelect = document.getElementById("onbCountrySelect");
+  const otherCountryWrap = document.getElementById("onbOtherCountryWrap");
+  const otherCountryInput = document.getElementById("onbOtherCountryInput");
+
+  if (nameInput) {
+    nameInput.value = (STATE.user && STATE.user.name && STATE.user.name !== "Guerreiro") ? STATE.user.name : "";
+  }
+  if (ageInput && STATE.user && STATE.user.age) {
+    ageInput.value = STATE.user.age;
+  }
+  if (countrySelect && STATE.user && STATE.user.country) {
+    let found = false;
+    for (let i = 0; i < countrySelect.options.length; i++) {
+      if (countrySelect.options[i].value.startsWith(STATE.user.country)) {
+        countrySelect.selectedIndex = i;
+        found = true;
+        break;
+      }
+    }
+    if (!found && STATE.user.country) {
+      countrySelect.value = "Outro|🌐";
+      if (otherCountryWrap) otherCountryWrap.style.display = "block";
+      if (otherCountryInput) otherCountryInput.value = STATE.user.country;
+    }
+  }
+
+  // Objetivo
+  if (STATE.user && STATE.user.goal) {
+    const cards = document.querySelectorAll('.onb-goal-card');
+    cards.forEach(c => {
+      const inp = c.querySelector('input');
+      if (inp && inp.value === STATE.user.goal) {
+        selectOnbGoal(c, STATE.user.goal);
+      }
+    });
+  }
+
+  updateAllCommunityCounters();
+  modal.style.display = "flex";
+
+  if (nameInput && !nameInput.value) {
+    setTimeout(() => nameInput.focus(), 300);
+  }
+}
+
+function closeOnboardingModal() {
+  const modal = document.getElementById("onboardingModal");
+  if (modal) {
+    modal.style.display = "none";
+  }
+}
+
+function handleOnbCountryChange(val) {
+  const otherWrap = document.getElementById("onbOtherCountryWrap");
+  if (!otherWrap) return;
+  if (val.startsWith("Outro")) {
+    otherWrap.style.display = "block";
+    const inp = document.getElementById("onbOtherCountryInput");
+    if (inp) inp.focus();
+  } else {
+    otherWrap.style.display = "none";
+  }
+}
+
+function selectOnbGoal(cardEl, goalValue) {
+  triggerHaptic('light');
+  document.querySelectorAll('.onb-goal-card').forEach(c => c.classList.remove('active'));
+  if (cardEl) {
+    cardEl.classList.add('active');
+    const inp = cardEl.querySelector('input');
+    if (inp) inp.checked = true;
+  }
+}
+
+function handleCompleteOnboarding(e) {
+  e.preventDefault();
+  triggerHaptic('success');
+
+  const nameInput = document.getElementById("onbNameInput");
+  const ageInput = document.getElementById("onbAgeInput");
+  const countrySelect = document.getElementById("onbCountrySelect");
+  const otherCountryInput = document.getElementById("onbOtherCountryInput");
+
+  const name = nameInput ? nameInput.value.trim() : "";
+  const age = ageInput ? parseInt(ageInput.value, 10) : null;
+
+  if (!name || name.length < 2) {
+    alert("Por favor, digite seu nome ou apelido (mínimo 2 letras)!");
+    if (nameInput) nameInput.focus();
+    return;
+  }
+
+  if (!age || age < 10 || age > 110) {
+    alert("Por favor, digite uma idade válida (entre 10 e 110 anos)!");
+    if (ageInput) ageInput.focus();
+    return;
+  }
+
+  let countryName = "Brasil";
+  let countryFlag = "🇧🇷";
+
+  if (countrySelect && countrySelect.value) {
+    const parts = countrySelect.value.split("|");
+    countryName = parts[0] || "Brasil";
+    countryFlag = parts[1] || "🇧🇷";
+    if (countryName === "Outro" && otherCountryInput && otherCountryInput.value.trim()) {
+      countryName = otherCountryInput.value.trim();
+      countryFlag = "🌐";
+    }
+  }
+
+  const checkedGoal = document.querySelector('input[name="onbGoal"]:checked');
+  const goal = checkedGoal ? checkedGoal.value : "Hipertrofia";
+
+  // Se for primeiro cadastro, incrementa contador da comunidade
+  if (!STATE.user.registered) {
+    let cur = getCommunityUsersCount();
+    cur++;
+    localStorage.setItem('ironlevel_community_users_count', cur);
+    STATE.user.memberNumber = cur;
+  }
+
+  STATE.user.name = name;
+  STATE.user.age = age;
+  STATE.user.country = countryName;
+  STATE.user.countryFlag = countryFlag;
+  STATE.user.goal = goal;
+  STATE.user.avatar = name.charAt(0).toUpperCase();
+  STATE.user.registered = true;
+  STATE.user.registeredDate = STATE.user.registeredDate || new Date().toISOString();
+
+  saveState();
+  closeOnboardingModal();
+
+  renderAll();
+  updateAllCommunityCounters();
+
+  if (typeof sfx !== 'undefined' && sfx.playLevelUp) {
+    sfx.playLevelUp();
+  } else if (typeof sfx !== 'undefined' && sfx.playCheck) {
+    sfx.playCheck();
+  }
+
+  if (typeof launchConfetti === 'function') {
+    launchConfetti();
+  }
+
+  showToast(`⚔️ Registro Oficial Concluído! Bem-vindo, ${name}! (${countryFlag} Guerreiro #${STATE.user.memberNumber})`);
+}
+
+function checkFirstTimeOnboarding() {
+  const isRegistered = STATE.user && STATE.user.registered === true;
+  if (!isRegistered) {
+    // Abre a tela de cadastro para novos usuários
+    setTimeout(() => {
+      openOnboardingModal();
+    }, 450);
+  }
 }
 
 // --- INIT APP ---
@@ -4592,5 +4867,6 @@ window.addEventListener("DOMContentLoaded", () => {
   STATE.activeDayIndex = getCurrentDayOfWeekIndex();
   populateExerciseCatalogCards();
   renderAll();
+  checkFirstTimeOnboarding();
   startAutoUpdateEngine();
 });
