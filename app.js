@@ -648,31 +648,201 @@ function unlockBadge(id) {
   }
 }
 
-// --- WORKOUT LIVE TIMER ---
-// --- SCREEN WAKE LOCK (Keep mobile screen ON during workouts) ---
+// --- WORKOUT LIVE TIMER (SUPORTE TOTAL A TELA BLOQUEADA & SEGUNDO PLANO) ---
+const WORKOUT_TIMER_STORAGE_KEY = 'ironlevel_active_workout_timer_v2';
+const REST_TIMER_STORAGE_KEY = 'ironlevel_active_rest_timer_v2';
+const GPS_TIMER_STORAGE_KEY = 'ironlevel_active_gps_timer_v2';
+const ROPE_TIMER_STORAGE_KEY = 'ironlevel_active_rope_timer_v2';
+
 let screenWakeLock = null;
 async function requestScreenWakeLock() {
   if ('wakeLock' in navigator) {
     try {
-      screenWakeLock = await navigator.wakeLock.request('screen');
+      if (screenWakeLock === null || screenWakeLock.released) {
+        screenWakeLock = await navigator.wakeLock.request('screen');
+        screenWakeLock.addEventListener('release', () => {
+          if ((timerRunning || gpsTracking || ropeActive) && document.visibilityState === 'visible') {
+            setTimeout(requestScreenWakeLock, 300);
+          }
+        });
+      }
     } catch (err) {}
   }
 }
+
 function releaseScreenWakeLock() {
   if (screenWakeLock !== null) {
-    screenWakeLock.release().then(() => { screenWakeLock = null; }).catch(() => {});
+    try {
+      screenWakeLock.release().then(() => { screenWakeLock = null; }).catch(() => {});
+    } catch (e) {}
+  }
+}
+
+// Background Web Worker Ticker (não é congelado pelo navegador quando a tela apaga)
+let bgWorker = null;
+function startBackgroundWorkerTicker() {
+  if (bgWorker) return;
+  try {
+    const workerScript = `
+      let timer = null;
+      self.onmessage = function(e) {
+        if (e.data === 'start') {
+          if (!timer) {
+            timer = setInterval(function() {
+              self.postMessage('tick');
+            }, 1000);
+          }
+        } else if (e.data === 'stop') {
+          if (timer) {
+            clearInterval(timer);
+            timer = null;
+          }
+        }
+      };
+    `;
+    const blob = new Blob([workerScript], { type: 'application/javascript' });
+    const url = URL.createObjectURL(blob);
+    bgWorker = new Worker(url);
+    bgWorker.onmessage = function(e) {
+      if (e.data === 'tick') {
+        syncAllTimersWithWallClock();
+      }
+    };
+    bgWorker.postMessage('start');
+  } catch (err) {
+    console.warn("Background worker indisponível:", err);
+  }
+}
+
+function stopBackgroundWorkerTicker() {
+  if (timerRunning || gpsTracking || ropeActive || (restEndTime && restRemaining > 0)) {
+    return; // outro timer ativo ainda precisa do worker
+  }
+  if (bgWorker) {
+    try {
+      bgWorker.postMessage('stop');
+      bgWorker.terminate();
+    } catch (e) {}
+    bgWorker = null;
   }
 }
 
 let timerInterval = null;
 let timerSeconds = 0;
 let timerRunning = false;
+let timerStartTime = null;        // Timestamp exato do relógio (Date.now())
+let timerAccumulatedSeconds = 0;   // Segundos acumulados antes da última pausa
 
 function formatSeconds(sec) {
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = sec % 60;
+  const safeSec = Math.max(0, Math.floor(sec || 0));
+  const h = Math.floor(safeSec / 3600);
+  const m = Math.floor((safeSec % 3600) / 60);
+  const s = safeSec % 60;
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+// Retorna sempre o tempo REAL baseado no relógio do sistema, imune ao bloqueio de tela
+function getActualWorkoutSeconds() {
+  if (!timerRunning || !timerStartTime) {
+    return timerAccumulatedSeconds;
+  }
+  const diffSec = Math.max(0, Math.floor((Date.now() - timerStartTime) / 1000));
+  return timerAccumulatedSeconds + diffSec;
+}
+
+function updateWorkoutTimerUI() {
+  timerSeconds = getActualWorkoutSeconds();
+  const disp = document.getElementById("liveTimerDisplay");
+  if (disp) disp.innerText = formatSeconds(timerSeconds);
+  const estPoints = (timerSeconds / 7200).toFixed(2);
+  const ptEl = document.getElementById("timerPointsEstimate");
+  if (ptEl) ptEl.innerText = `+${estPoints} pt`;
+  updateActiveWorkoutBottomBar();
+}
+
+function saveActiveWorkoutTimerSession() {
+  try {
+    if (timerRunning && timerStartTime) {
+      const session = {
+        running: true,
+        startTime: timerStartTime,
+        accumulatedSeconds: timerAccumulatedSeconds,
+        savedAt: Date.now(),
+        activeDayIndex: STATE.activeDayIndex
+      };
+      localStorage.setItem(WORKOUT_TIMER_STORAGE_KEY, JSON.stringify(session));
+    } else if (!timerRunning && timerAccumulatedSeconds > 0) {
+      const session = {
+        running: false,
+        startTime: null,
+        accumulatedSeconds: timerAccumulatedSeconds,
+        savedAt: Date.now(),
+        activeDayIndex: STATE.activeDayIndex
+      };
+      localStorage.setItem(WORKOUT_TIMER_STORAGE_KEY, JSON.stringify(session));
+    } else {
+      localStorage.removeItem(WORKOUT_TIMER_STORAGE_KEY);
+    }
+  } catch (e) {}
+}
+
+function restoreActiveWorkoutTimerSession() {
+  try {
+    const raw = localStorage.getItem(WORKOUT_TIMER_STORAGE_KEY);
+    if (!raw) return;
+    const session = JSON.parse(raw);
+    if (!session) return;
+
+    // Se a sessão for de mais de 14 horas atrás, descarta
+    const MAX_SESSION_AGE = 14 * 60 * 60 * 1000;
+    if (Date.now() - session.savedAt > MAX_SESSION_AGE) {
+      localStorage.removeItem(WORKOUT_TIMER_STORAGE_KEY);
+      return;
+    }
+
+    timerAccumulatedSeconds = session.accumulatedSeconds || 0;
+    if (session.running && session.startTime) {
+      timerStartTime = session.startTime;
+      timerRunning = true;
+      timerSeconds = getActualWorkoutSeconds();
+
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        updateWorkoutTimerUI();
+      }, 1000);
+
+      requestScreenWakeLock();
+      startBackgroundWorkerTicker();
+
+      const btnStart = document.getElementById("btnTimerStart");
+      const btnPause = document.getElementById("btnTimerPause");
+      const btnFinish = document.getElementById("btnTimerFinish");
+      const btnReset = document.getElementById("btnTimerReset");
+      if (btnStart) btnStart.style.display = "none";
+      if (btnPause) btnPause.style.display = "inline-flex";
+      if (btnFinish) btnFinish.style.display = "inline-flex";
+      if (btnReset) btnReset.style.display = "inline-flex";
+    } else {
+      timerRunning = false;
+      timerSeconds = timerAccumulatedSeconds;
+      const btnStart = document.getElementById("btnTimerStart");
+      const btnPause = document.getElementById("btnTimerPause");
+      const btnFinish = document.getElementById("btnTimerFinish");
+      const btnReset = document.getElementById("btnTimerReset");
+      if (btnStart) {
+        btnStart.style.display = "inline-flex";
+        btnStart.innerText = "▶ Continuar";
+      }
+      if (btnPause) btnPause.style.display = "none";
+      if (btnFinish) btnFinish.style.display = "inline-flex";
+      if (btnReset) btnReset.style.display = "inline-flex";
+    }
+
+    updateWorkoutTimerUI();
+    updateActiveWorkoutBottomBar();
+  } catch (err) {
+    console.error("Erro ao restaurar timer:", err);
+  }
 }
 
 function toggleWorkoutTimer() {
@@ -680,7 +850,10 @@ function toggleWorkoutTimer() {
   triggerHaptic("medium");
   if (!timerRunning) {
     timerRunning = true;
+    timerStartTime = Date.now();
     requestScreenWakeLock();
+    startBackgroundWorkerTicker();
+
     const btnStart = document.getElementById("btnTimerStart");
     const btnPause = document.getElementById("btnTimerPause");
     const btnFinish = document.getElementById("btnTimerFinish");
@@ -689,25 +862,30 @@ function toggleWorkoutTimer() {
     if (btnPause) btnPause.style.display = "inline-flex";
     if (btnFinish) btnFinish.style.display = "inline-flex";
     if (btnReset) btnReset.style.display = "inline-flex";
-    
+
+    if (timerInterval) clearInterval(timerInterval);
     timerInterval = setInterval(() => {
-      timerSeconds++;
-      const disp = document.getElementById("liveTimerDisplay");
-      if (disp) disp.innerText = formatSeconds(timerSeconds);
-      const estPoints = (timerSeconds / 7200).toFixed(2);
-      const ptEl = document.getElementById("timerPointsEstimate");
-      if (ptEl) ptEl.innerText = `+${estPoints} pt`;
-      updateActiveWorkoutBottomBar();
+      updateWorkoutTimerUI();
     }, 1000);
-    updateActiveWorkoutBottomBar();
+
+    saveActiveWorkoutTimerSession();
+    updateWorkoutTimerUI();
   }
 }
 
 function pauseWorkoutTimer() {
   if (timerRunning) {
-    clearInterval(timerInterval);
+    timerAccumulatedSeconds = getActualWorkoutSeconds();
+    timerStartTime = null;
     timerRunning = false;
+    if (timerInterval) {
+      clearInterval(timerInterval);
+      timerInterval = null;
+    }
     releaseScreenWakeLock();
+    stopBackgroundWorkerTicker();
+    saveActiveWorkoutTimerSession();
+
     const btnStart = document.getElementById("btnTimerStart");
     const btnPause = document.getElementById("btnTimerPause");
     if (btnStart) {
@@ -715,7 +893,7 @@ function pauseWorkoutTimer() {
       btnStart.innerText = "▶ Continuar";
     }
     if (btnPause) btnPause.style.display = "none";
-    updateActiveWorkoutBottomBar();
+    updateWorkoutTimerUI();
   }
 }
 
@@ -724,14 +902,26 @@ function finishWorkoutTimer() {
 }
 
 function resetWorkoutTimer() {
-  clearInterval(timerInterval);
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
   releaseScreenWakeLock();
   timerRunning = false;
+  timerStartTime = null;
+  timerAccumulatedSeconds = 0;
   timerSeconds = 0;
+  stopBackgroundWorkerTicker();
+
+  try {
+    localStorage.removeItem(WORKOUT_TIMER_STORAGE_KEY);
+  } catch (e) {}
+
   const disp = document.getElementById("liveTimerDisplay");
   if (disp) disp.innerText = "00:00:00";
   const ptEl = document.getElementById("timerPointsEstimate");
   if (ptEl) ptEl.innerText = "+0.0 pt";
+
   const btnStart = document.getElementById("btnTimerStart");
   const btnPause = document.getElementById("btnTimerPause");
   const btnFinish = document.getElementById("btnTimerFinish");
@@ -746,38 +936,141 @@ function resetWorkoutTimer() {
   updateActiveWorkoutBottomBar();
 }
 
-// --- REST TIMER ---
+// --- REST TIMER COM ALARME EM SEGUNDO PLANO / TELA BLOQUEADA ---
 let restInterval = null;
 let restRemaining = 0;
+let restEndTime = null;
+let restTotalSeconds = 0;
 
 function startRestTimer(seconds) {
   sfx.playBeep(520, 0.1);
-  clearInterval(restInterval);
+  if (restInterval) clearInterval(restInterval);
+
+  restTotalSeconds = seconds;
+  restEndTime = Date.now() + (seconds * 1000);
   restRemaining = seconds;
+
+  try {
+    localStorage.setItem(REST_TIMER_STORAGE_KEY, JSON.stringify({
+      endTime: restEndTime,
+      totalSeconds: restTotalSeconds,
+      startedAt: Date.now()
+    }));
+  } catch (e) {}
+
   const pill = document.getElementById("restTimerPill");
-  pill.classList.add("active");
-  document.getElementById("restTimerDisplay").innerText = `00:${String(restRemaining).padStart(2, '0')}`;
-  
-  restInterval = setInterval(() => {
-    restRemaining--;
-    if (restRemaining <= 0) {
-      clearInterval(restInterval);
-      pill.classList.remove("active");
-      // Triple beep alert!
-      sfx.playBeep(880, 0.2);
-      setTimeout(() => sfx.playBeep(880, 0.2), 250);
-      setTimeout(() => sfx.playBeep(1100, 0.4), 500);
-    } else {
-      const m = Math.floor(restRemaining / 60);
-      const s = restRemaining % 60;
-      document.getElementById("restTimerDisplay").innerText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
-    }
-  }, 1000);
+  if (pill) pill.classList.add("active");
+  updateRestTimerUI();
+
+  restInterval = setInterval(tickRestTimer, 1000);
+  startBackgroundWorkerTicker();
+}
+
+function tickRestTimer() {
+  if (!restEndTime) return;
+  const now = Date.now();
+  restRemaining = Math.max(0, Math.ceil((restEndTime - now) / 1000));
+  updateRestTimerUI();
+
+  if (restRemaining <= 0) {
+    finishRestTimer();
+  }
+}
+
+function updateRestTimerUI() {
+  const disp = document.getElementById("restTimerDisplay");
+  if (disp) {
+    const m = Math.floor(restRemaining / 60);
+    const s = restRemaining % 60;
+    disp.innerText = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }
+}
+
+function finishRestTimer() {
+  if (restInterval) {
+    clearInterval(restInterval);
+    restInterval = null;
+  }
+  restEndTime = null;
+  restRemaining = 0;
+  stopBackgroundWorkerTicker();
+
+  try {
+    localStorage.removeItem(REST_TIMER_STORAGE_KEY);
+  } catch (e) {}
+
+  const pill = document.getElementById("restTimerPill");
+  if (pill) pill.classList.remove("active");
+
+  // Alerta sonoro triplo e vibração forte mesmo se o celular estiver acordando do bloqueio
+  sfx.playBeep(880, 0.2);
+  setTimeout(() => sfx.playBeep(880, 0.2), 250);
+  setTimeout(() => sfx.playBeep(1100, 0.4), 500);
+
+  if ('vibrate' in navigator) {
+    try {
+      navigator.vibrate([300, 120, 300, 120, 500]);
+    } catch (e) {}
+  }
 }
 
 function cancelRestTimer() {
-  clearInterval(restInterval);
-  document.getElementById("restTimerPill").classList.remove("active");
+  if (restInterval) {
+    clearInterval(restInterval);
+    restInterval = null;
+  }
+  restEndTime = null;
+  restRemaining = 0;
+  stopBackgroundWorkerTicker();
+  try {
+    localStorage.removeItem(REST_TIMER_STORAGE_KEY);
+  } catch (e) {}
+  const pill = document.getElementById("restTimerPill");
+  if (pill) pill.classList.remove("active");
+}
+
+function checkExpiredRestTimer() {
+  try {
+    const raw = localStorage.getItem(REST_TIMER_STORAGE_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (!data || !data.endTime) return;
+
+    if (Date.now() >= data.endTime) {
+      // O tempo de descanso expirou enquanto o celular estava com a tela bloqueada!
+      finishRestTimer();
+      showToast("⏱️ Descanso Concluído! Bora pra próxima série! 💪");
+    } else {
+      // Ainda resta tempo: ressincroniza o cronômetro
+      restEndTime = data.endTime;
+      restTotalSeconds = data.totalSeconds || 60;
+      restRemaining = Math.max(0, Math.ceil((restEndTime - Date.now()) / 1000));
+      const pill = document.getElementById("restTimerPill");
+      if (pill) pill.classList.add("active");
+      updateRestTimerUI();
+      if (!restInterval) {
+        restInterval = setInterval(tickRestTimer, 1000);
+      }
+      startBackgroundWorkerTicker();
+    }
+  } catch (e) {}
+}
+
+function syncAllTimersWithWallClock() {
+  if (timerRunning) {
+    updateWorkoutTimerUI();
+  }
+  if (restEndTime) {
+    tickRestTimer();
+  }
+  if (gpsTracking && !gpsPaused) {
+    gpsElapsedSeconds = getActualGpsSeconds();
+    updateGpsHud();
+  }
+  if (ropeActive && !ropePaused) {
+    ropeElapsedSeconds = getActualRopeSeconds();
+    updateRopeHud();
+  }
 }
 
 // --- RUNNING TRACKER & STRAVA-STYLE GPS ENGINE ---
@@ -790,30 +1083,138 @@ let routePolyline = null;
 let currentPosMarker = null;
 let startPosMarker = null;
 
-// GPS Tracking State
+// GPS Tracking State (Imune a tela bloqueada / segundo plano)
 let gpsTracking = false;
 let gpsPaused = false;
 let gpsWatchId = null;
 let gpsTimerInterval = null;
 let gpsElapsedSeconds = 0;
+let gpsStartTime = null;
+let gpsAccumulatedSeconds = 0;
 let gpsTotalKm = 0;
 let gpsRoutePoints = [];
 let lastGpsPoint = null;
 let currentGpsActivity = 'run'; // 'run' | 'bike'
 
+function getActualGpsSeconds() {
+  if (gpsTracking && !gpsPaused && gpsStartTime) {
+    const diff = Math.max(0, Math.floor((Date.now() - gpsStartTime) / 1000));
+    return gpsAccumulatedSeconds + diff;
+  }
+  return gpsAccumulatedSeconds;
+}
+
+function saveActiveGpsSession() {
+  try {
+    if (gpsTracking) {
+      localStorage.setItem(GPS_TIMER_STORAGE_KEY, JSON.stringify({
+        tracking: true,
+        paused: gpsPaused,
+        startTime: gpsStartTime,
+        accumulatedSeconds: gpsAccumulatedSeconds,
+        totalKm: gpsTotalKm,
+        activity: currentGpsActivity,
+        savedAt: Date.now()
+      }));
+    } else {
+      localStorage.removeItem(GPS_TIMER_STORAGE_KEY);
+    }
+  } catch(e) {}
+}
+
+function restoreActiveGpsSession() {
+  try {
+    const raw = localStorage.getItem(GPS_TIMER_STORAGE_KEY);
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    if (!s || !s.tracking) return;
+    if (Date.now() - s.savedAt > 10 * 60 * 60 * 1000) {
+      localStorage.removeItem(GPS_TIMER_STORAGE_KEY);
+      return;
+    }
+    gpsTracking = true;
+    gpsPaused = !!s.paused;
+    currentGpsActivity = s.activity || 'run';
+    gpsTotalKm = s.totalKm || 0;
+    gpsAccumulatedSeconds = s.accumulatedSeconds || 0;
+    if (!gpsPaused && s.startTime) {
+      gpsStartTime = s.startTime;
+      gpsElapsedSeconds = getActualGpsSeconds();
+      startBackgroundWorkerTicker();
+      requestScreenWakeLock();
+    } else {
+      gpsElapsedSeconds = gpsAccumulatedSeconds;
+    }
+    updateGpsHud();
+  } catch(e) {}
+}
+
 // Route Viewer Modal State
 let routeModalMap = null;
 let routeModalPolyline = null;
 
-// --- JUMP ROPE SENSOR STATE (Opção 1) ---
+// --- JUMP ROPE SENSOR STATE (Opção 1 - Imune a tela bloqueada) ---
 let ropeActive = false;
 let ropePaused = false;
 let ropeJumpCount = 0;
 let ropeElapsedSeconds = 0;
+let ropeStartTime = null;
+let ropeAccumulatedSeconds = 0;
 let ropeTimerInterval = null;
 let ropeRecentJumpTimestamps = [];
 let lastJumpTimestamp = 0;
 let ropeMotionHandler = null;
+
+function getActualRopeSeconds() {
+  if (ropeActive && !ropePaused && ropeStartTime) {
+    const diff = Math.max(0, Math.floor((Date.now() - ropeStartTime) / 1000));
+    return ropeAccumulatedSeconds + diff;
+  }
+  return ropeAccumulatedSeconds;
+}
+
+function saveActiveRopeSession() {
+  try {
+    if (ropeActive) {
+      localStorage.setItem(ROPE_TIMER_STORAGE_KEY, JSON.stringify({
+        active: true,
+        paused: ropePaused,
+        startTime: ropeStartTime,
+        accumulatedSeconds: ropeAccumulatedSeconds,
+        jumpCount: ropeJumpCount,
+        savedAt: Date.now()
+      }));
+    } else {
+      localStorage.removeItem(ROPE_TIMER_STORAGE_KEY);
+    }
+  } catch(e) {}
+}
+
+function restoreActiveRopeSession() {
+  try {
+    const raw = localStorage.getItem(ROPE_TIMER_STORAGE_KEY);
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    if (!s || !s.active) return;
+    if (Date.now() - s.savedAt > 6 * 60 * 60 * 1000) {
+      localStorage.removeItem(ROPE_TIMER_STORAGE_KEY);
+      return;
+    }
+    ropeActive = true;
+    ropePaused = !!s.paused;
+    ropeJumpCount = s.jumpCount || 0;
+    ropeAccumulatedSeconds = s.accumulatedSeconds || 0;
+    if (!ropePaused && s.startTime) {
+      ropeStartTime = s.startTime;
+      ropeElapsedSeconds = getActualRopeSeconds();
+      startBackgroundWorkerTicker();
+      requestScreenWakeLock();
+    } else {
+      ropeElapsedSeconds = ropeAccumulatedSeconds;
+    }
+    updateRopeHud();
+  } catch(e) {}
+}
 
 function switchRunSubtab(subtab) {
   triggerHaptic('light');
@@ -939,10 +1340,14 @@ function beginJumpRopeTracking() {
   ropePaused = false;
   ropeJumpCount = 0;
   ropeElapsedSeconds = 0;
+  ropeStartTime = Date.now();
+  ropeAccumulatedSeconds = 0;
   ropeRecentJumpTimestamps = [];
   lastJumpTimestamp = 0;
 
   requestScreenWakeLock();
+  startBackgroundWorkerTicker();
+  saveActiveRopeSession();
 
   // Update UI buttons
   const startBtn = document.getElementById("btnRopeStart");
@@ -971,7 +1376,7 @@ function beginJumpRopeTracking() {
   if (ropeTimerInterval) clearInterval(ropeTimerInterval);
   ropeTimerInterval = setInterval(() => {
     if (ropeActive && !ropePaused) {
-      ropeElapsedSeconds++;
+      ropeElapsedSeconds = getActualRopeSeconds();
       updateRopeHud();
     }
   }, 1000);
@@ -1074,7 +1479,10 @@ function updateRopeHud() {
 
 function pauseJumpRope() {
   triggerHaptic('medium');
+  ropeAccumulatedSeconds = getActualRopeSeconds();
+  ropeStartTime = null;
   ropePaused = true;
+  saveActiveRopeSession();
   document.getElementById("btnRopePause").style.display = "none";
   document.getElementById("btnRopeResume").style.display = "inline-flex";
   setRopeBadgeStatus("Treino de corda pausado ⏸️", false);
@@ -1082,7 +1490,10 @@ function pauseJumpRope() {
 
 function resumeJumpRope() {
   triggerHaptic('medium');
+  ropeStartTime = Date.now();
   ropePaused = false;
+  startBackgroundWorkerTicker();
+  saveActiveRopeSession();
   document.getElementById("btnRopeResume").style.display = "none";
   document.getElementById("btnRopePause").style.display = "inline-flex";
   setRopeBadgeStatus("Pulando corda... Bora! 🪢", true);
@@ -1098,6 +1509,10 @@ function cancelJumpRope() {
 function stopJumpRopeTracking() {
   ropeActive = false;
   ropePaused = false;
+  ropeStartTime = null;
+  ropeAccumulatedSeconds = 0;
+  try { localStorage.removeItem(ROPE_TIMER_STORAGE_KEY); } catch(e) {}
+  stopBackgroundWorkerTicker();
   if (ropeTimerInterval) {
     clearInterval(ropeTimerInterval);
     ropeTimerInterval = null;
@@ -1358,10 +1773,17 @@ function startGpsRun() {
       : "🔴 Gravando rota GPS ao vivo... Bora correr! 🏃";
   }
 
-  // Start Live Timer
+  // Start Live Timer (Imune ao bloqueio de tela)
+  gpsStartTime = Date.now();
+  gpsAccumulatedSeconds = 0;
+  gpsElapsedSeconds = 0;
+  startBackgroundWorkerTicker();
+  saveActiveGpsSession();
+
+  if (gpsTimerInterval) clearInterval(gpsTimerInterval);
   gpsTimerInterval = setInterval(() => {
     if (!gpsPaused) {
-      gpsElapsedSeconds++;
+      gpsElapsedSeconds = getActualGpsSeconds();
       updateGpsHud();
     }
   }, 1000);
@@ -1469,7 +1891,10 @@ function updateGpsHud() {
 
 function pauseGpsRun() {
   triggerHaptic('medium');
+  gpsAccumulatedSeconds = getActualGpsSeconds();
+  gpsStartTime = null;
   gpsPaused = true;
+  saveActiveGpsSession();
   document.getElementById("btnGpsPause").style.display = "none";
   document.getElementById("btnGpsResume").style.display = "inline-flex";
   const statusText = document.getElementById("gpsStatusText");
@@ -1482,7 +1907,10 @@ function pauseGpsRun() {
 
 function resumeGpsRun() {
   triggerHaptic('medium');
+  gpsStartTime = Date.now();
   gpsPaused = false;
+  startBackgroundWorkerTicker();
+  saveActiveGpsSession();
   document.getElementById("btnGpsResume").style.display = "none";
   document.getElementById("btnGpsPause").style.display = "inline-flex";
   const statusText = document.getElementById("gpsStatusText");
@@ -1504,6 +1932,10 @@ function cancelGpsRun() {
 function stopGpsTracking() {
   gpsTracking = false;
   gpsPaused = false;
+  gpsStartTime = null;
+  gpsAccumulatedSeconds = 0;
+  try { localStorage.removeItem(GPS_TIMER_STORAGE_KEY); } catch(e) {}
+  stopBackgroundWorkerTicker();
   if (gpsWatchId) {
     navigator.geolocation.clearWatch(gpsWatchId);
     gpsWatchId = null;
@@ -2701,13 +3133,39 @@ function startAutoUpdateEngine() {
   // Checagem contínua estritamente a cada 2 minutos
   setInterval(runAutoOptimizationAndCheck, AUTO_UPDATE_INTERVAL_MS);
 
-  // Também otimiza sempre que o usuário desbloquear o celular ou voltar para a aba
+  // GESTÃO DE CICLO DE VIDA DO DISPOSITIVO (TELA BLOQUEADA / DESBLOQUEADA)
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
+      // 1. Ressincroniza todos os cronômetros na hora com o relógio do sistema (Date.now())
+      syncAllTimersWithWallClock();
+      // 2. Se o descanso acabou durante o bloqueio da tela, dispara o alarme
+      checkExpiredRestTimer();
+      // 3. Se algum treino está ativo, reativa o Screen Wake Lock
+      if (timerRunning || gpsTracking || ropeActive) {
+        requestScreenWakeLock();
+      }
       const elapsed = Date.now() - lastAutoOptimizedAt;
       if (elapsed >= AUTO_UPDATE_INTERVAL_MS) {
         runAutoOptimizationAndCheck();
       }
+    } else {
+      // Tela bloqueada ou aba minimizada: salva o estado exato dos cronômetros
+      saveActiveWorkoutTimerSession();
+      saveActiveGpsSession();
+      saveActiveRopeSession();
+    }
+  });
+
+  window.addEventListener('pageshow', () => {
+    syncAllTimersWithWallClock();
+    checkExpiredRestTimer();
+  });
+
+  window.addEventListener('focus', () => {
+    syncAllTimersWithWallClock();
+    checkExpiredRestTimer();
+    if (timerRunning || gpsTracking || ropeActive) {
+      requestScreenWakeLock();
     }
   });
 }
@@ -3495,6 +3953,7 @@ function startWorkoutSessionPro(triggerVib = true) {
 
 // FINALIZAR TREINO PRO
 function finishWorkoutSessionPro() {
+  timerSeconds = getActualWorkoutSeconds();
   pauseWorkoutTimer();
   releaseScreenWakeLock();
 
@@ -4867,6 +5326,10 @@ window.addEventListener("DOMContentLoaded", () => {
   STATE.activeDayIndex = getCurrentDayOfWeekIndex();
   populateExerciseCatalogCards();
   renderAll();
+  restoreActiveWorkoutTimerSession();
+  restoreActiveGpsSession();
+  restoreActiveRopeSession();
+  checkExpiredRestTimer();
   checkFirstTimeOnboarding();
   startAutoUpdateEngine();
 });
