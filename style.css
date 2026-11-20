@@ -2444,6 +2444,35 @@ button, .btn, .card, .session-item, .segmented-btn, .nav-btn,
   box-shadow: 0 0 12px rgba(34, 197, 94, 0.6);
 }
 
+.btn-exercise-header-check {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 900;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  padding: 0;
+}
+.btn-exercise-header-check:hover {
+  border-color: #22c55e;
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+}
+.btn-exercise-header-check.checked {
+  background: #22c55e !important;
+  border-color: #22c55e !important;
+  color: #000000 !important;
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.6);
+}
+
 .btn-add-set {
   background: none;
   border: none;

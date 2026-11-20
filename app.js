@@ -60,6 +60,9 @@ class SoundEffects {
     osc.start();
     osc.stop(now + 0.12);
   }
+  playDone() {
+    this.playCheck();
+  }
   playLevelUp() {
     triggerHaptic("levelup");
     this.init();
@@ -3831,41 +3834,94 @@ function toggleExerciseExpand(exId) {
 
 // Concluir/Desmarcar série individual (SET-BY-SET TRACKING)
 function toggleSetDone(exId, setNum) {
-  const currentDay = (typeof STATE.activeDayIndex === 'number' && STATE.activeDayIndex >= 0) ? STATE.activeDayIndex : 0;
-  const routine = STATE.routines[currentDay];
-  if (!routine || !routine.exercises) return;
-  const ex = routine.exercises.find(e => e.id === exId);
-  if (!ex) return;
-  ensureExerciseSeries(ex);
+  try {
+    const currentDay = (typeof STATE.activeDayIndex === 'number' && STATE.activeDayIndex >= 0) ? STATE.activeDayIndex : 0;
+    const routine = STATE.routines[currentDay];
+    if (!routine || !routine.exercises) return;
+    const ex = routine.exercises.find(e => e.id === exId);
+    if (!ex) return;
+    ensureExerciseSeries(ex);
 
-  const s = ex.series.find(item => item.setNum === setNum);
-  if (!s) return;
+    const s = ex.series.find(item => item.setNum === setNum);
+    if (!s) return;
 
-  s.done = !s.done;
+    s.done = !s.done;
 
-  if (s.done) {
-    sfx.playDone();
-    triggerHaptic('success');
-    s.prevWeight = s.weight;
-    s.prevReps = s.reps;
+    if (s.done) {
+      try {
+        if (typeof sfx !== 'undefined' && typeof sfx.playCheck === 'function') {
+          sfx.playCheck();
+        }
+      } catch (e) {}
+      triggerHaptic('success');
+      s.prevWeight = s.weight;
+      s.prevReps = s.reps;
 
-    // Dispara descanso automático configurado no exercício
-    startRestTimer(ex.rest || 60);
+      // Dispara descanso automático configurado no exercício
+      startRestTimer(ex.rest || 60);
 
-    // Se o cronômetro do treino ainda não estiver rodando, inicia sozinho
-    if (!timerRunning) {
-      startWorkoutSessionPro(false);
+      // Se o cronômetro do treino ainda não estiver rodando, inicia
+      if (!timerRunning) {
+        toggleWorkoutTimer();
+      }
+    } else {
+      triggerHaptic('light');
     }
-  } else {
-    triggerHaptic('light');
+
+    // Se todas as séries estiverem feitas, marca o exercício como concluído
+    ex.done = ex.series.every(item => item.done);
+
+    saveState();
+    renderWorkoutRoutineView();
+    updateActiveWorkoutBottomBar();
+  } catch (err) {
+    console.error("Erro ao marcar série:", err);
   }
+}
 
-  // Se todas as séries estiverem feitas, marca o exercício como concluído
-  ex.done = ex.series.every(item => item.done);
+// Concluir/Desmarcar todas as séries de um exercício de uma vez só
+function toggleAllExerciseSetsDone(exId) {
+  try {
+    const currentDay = (typeof STATE.activeDayIndex === 'number' && STATE.activeDayIndex >= 0) ? STATE.activeDayIndex : 0;
+    const routine = STATE.routines[currentDay];
+    if (!routine || !routine.exercises) return;
+    const ex = routine.exercises.find(e => e.id === exId);
+    if (!ex) return;
+    ensureExerciseSeries(ex);
 
-  saveState();
-  renderWorkoutRoutineView();
-  updateActiveWorkoutBottomBar();
+    const areAllDone = ex.series.every(s => s.done);
+    const targetState = !areAllDone;
+
+    ex.series.forEach(s => {
+      s.done = targetState;
+      if (targetState) {
+        s.prevWeight = s.weight;
+        s.prevReps = s.reps;
+      }
+    });
+    ex.done = targetState;
+
+    if (targetState) {
+      try {
+        if (typeof sfx !== 'undefined' && typeof sfx.playCheck === 'function') {
+          sfx.playCheck();
+        }
+      } catch (e) {}
+      triggerHaptic('success');
+      startRestTimer(ex.rest || 60);
+      if (!timerRunning) {
+        toggleWorkoutTimer();
+      }
+    } else {
+      triggerHaptic('light');
+    }
+
+    saveState();
+    renderWorkoutRoutineView();
+    updateActiveWorkoutBottomBar();
+  } catch (err) {
+    console.error("Erro ao alternar todas as séries:", err);
+  }
 }
 
 // Atualizar valor de Carga (kg) ou Reps de uma série
@@ -4063,16 +4119,18 @@ function renderExerciseCardMetaFit(ex, idx, isInsideBiset) {
         <span class="set-prev-record" title="Desempenho na última vez">${prevText}</span>
         <div class="set-input-wrap">
           <input type="number" step="0.5" class="set-input-field" value="${s.weight}" 
+            oninput="updateSetData('${ex.id}', ${s.setNum}, 'weight', this.value)"
             onchange="updateSetData('${ex.id}', ${s.setNum}, 'weight', this.value)"
             onfocus="this.select()" title="Carga em kg" />
         </div>
         <div class="set-input-wrap wrap-reps">
           <input type="number" class="set-input-field" value="${s.reps}" 
+            oninput="updateSetData('${ex.id}', ${s.setNum}, 'reps', this.value)"
             onchange="updateSetData('${ex.id}', ${s.setNum}, 'reps', this.value)"
             onfocus="this.select()" title="Repetições feitas" />
         </div>
-        <button class="btn-set-check ${isChecked ? 'checked' : ''}" 
-          onclick="toggleSetDone('${ex.id}', ${s.setNum})" title="Concluir Série">
+        <button type="button" class="btn-set-check ${isChecked ? 'checked' : ''}" 
+          onclick="event.stopPropagation(); toggleSetDone('${ex.id}', ${s.setNum})" title="Concluir Série">
           ${isChecked ? '✓' : ''}
         </button>
       </div>
@@ -4098,6 +4156,9 @@ function renderExerciseCardMetaFit(ex, idx, isInsideBiset) {
           </div>
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
+          <button type="button" class="btn-exercise-header-check ${completedSets === totalSets && totalSets > 0 ? 'checked' : ''}" onclick="event.stopPropagation(); toggleAllExerciseSetsDone('${ex.id}')" title="Marcar/Desmarcar todas as séries">
+            ${completedSets === totalSets && totalSets > 0 ? '✓' : '○'}
+          </button>
           <span class="expand-chevron" style="transform: ${isExpanded ? 'rotate(180deg)' : 'rotate(0deg)'};">▼</span>
         </div>
       </div>
