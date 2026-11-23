@@ -4054,6 +4054,51 @@ function finishWorkoutSessionPro() {
   }
 }
 
+let isWorkoutBarMinimized = false;
+
+function toggleActiveWorkoutBarMinimize() {
+  triggerHaptic('light');
+  const bar = document.getElementById("activeWorkoutBar");
+  const btn = document.getElementById("btnMinimizeWorkoutBar");
+  if (!bar) return;
+  isWorkoutBarMinimized = !isWorkoutBarMinimized;
+  if (isWorkoutBarMinimized) {
+    bar.classList.add("minimized");
+    if (btn) btn.innerText = "▲";
+    if (btn) btn.title = "Expandir Barra do Treino";
+  } else {
+    bar.classList.remove("minimized");
+    if (btn) btn.innerText = "▼";
+    if (btn) btn.title = "Minimizar Barra do Treino";
+  }
+}
+
+function handleActiveWorkoutBarInfoClick() {
+  const bar = document.getElementById("activeWorkoutBar");
+  if (bar && bar.classList.contains("minimized")) {
+    toggleActiveWorkoutBarMinimize();
+  }
+}
+
+// Sincroniza o estado de modais abertos no body para proteger botões de salvar contra sobreposição
+function setupModalZIndexWatcher() {
+  const syncModalState = () => {
+    const anyModalOpen = !!document.querySelector('.modal-backdrop.open, .onboarding-overlay[style*="display: flex"]');
+    if (anyModalOpen) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+  };
+
+  try {
+    const observer = new MutationObserver(syncModalState);
+    observer.observe(document.body, { attributes: true, subtree: true, attributeFilter: ['class', 'style'] });
+  } catch (e) {}
+
+  syncModalState();
+}
+
 // ATUALIZAR BARRA FIXA INFERIOR DO TREINO EM ANDAMENTO
 function updateActiveWorkoutBottomBar() {
   const bar = document.getElementById("activeWorkoutBar");
@@ -5392,5 +5437,6 @@ window.addEventListener("DOMContentLoaded", () => {
   restoreActiveRopeSession();
   checkExpiredRestTimer();
   checkFirstTimeOnboarding();
+  setupModalZIndexWatcher();
   startAutoUpdateEngine();
 });

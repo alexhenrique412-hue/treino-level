@@ -703,7 +703,7 @@
 
   <!-- Barra Fixa Inferior: Treino em Andamento (Estilo MetaFit) -->
   <div class="active-workout-bottom-bar" id="activeWorkoutBar" style="display: none;">
-    <div class="active-workout-info">
+    <div class="active-workout-info" onclick="handleActiveWorkoutBarInfoClick()" style="cursor: pointer;">
       <div class="active-workout-badge">
         <span class="pulse-dot"></span>
         <span id="activeWorkoutTitleBadge">TREINO A · EM ANDAMENTO</span>
@@ -712,9 +712,10 @@
         <strong id="activeWorkoutTimerDisplay">00:00:00</strong> · <span id="activeWorkoutProgressText">0/0 SÉRIES · 0%</span>
       </div>
     </div>
-    <div style="display: flex; gap: 8px; align-items: center;">
+    <div style="display: flex; gap: 6px; align-items: center;">
       <button class="btn-rest-trigger" onclick="startRestTimer(60)" title="Descanso Rápido">⏱️</button>
       <button class="btn btn-finish-workout" onclick="finishWorkoutSessionPro()">Finalizar</button>
+      <button type="button" class="btn-minimize-bar" id="btnMinimizeWorkoutBar" onclick="toggleActiveWorkoutBarMinimize()" title="Minimizar / Expandir Barra">▼</button>
     </div>
   </div>
 

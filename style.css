@@ -1422,13 +1422,16 @@ input, select, textarea {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(5px);
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   display: none;
   align-items: center;
   justify-content: center;
-  z-index: 100;
-  padding: 20px;
+  z-index: 25000 !important;
+  padding: 16px 12px;
+  overflow-y: auto;
+  box-sizing: border-box;
 }
 
 .modal-backdrop.open {
@@ -1441,11 +1444,36 @@ input, select, textarea {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   width: 100%;
-  max-width: 420px;
-  padding: 22px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
-  max-height: 90vh;
+  max-width: 440px;
+  padding: 22px 20px 28px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9);
+  max-height: 86vh;
+  max-height: 86dvh;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: auto;
+  position: relative;
+  z-index: 25001 !important;
+}
+
+/* Ocultar / desativar barras flutuantes e cronômetro quando QUALQUER modal estiver aberto */
+body:has(.modal-backdrop.open) .active-workout-bottom-bar,
+body:has(.modal-backdrop.open) .bottom-nav,
+body:has(.modal-backdrop.open) .rest-timer-pill,
+body:has(.onboarding-overlay[style*="display: flex"]) .active-workout-bottom-bar,
+body:has(.onboarding-overlay[style*="display: flex"]) .bottom-nav,
+body.modal-open .active-workout-bottom-bar,
+body.modal-open .bottom-nav,
+body.modal-open .rest-timer-pill {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  transform: translate(-50%, 60px) !important;
+  transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
+}
+
+#tab-workout {
+  padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px)) !important;
 }
 
 .modal-header {
@@ -2641,6 +2669,50 @@ button, .btn, .card, .session-item, .segmented-btn, .nav-btn,
 }
 .btn-finish-workout:hover {
   background: #dc2626;
+}
+
+.btn-minimize-bar {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.btn-minimize-bar:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.active-workout-bottom-bar.minimized {
+  padding: 6px 14px;
+  border-radius: 30px;
+  bottom: 68px;
+  width: auto;
+  min-width: 170px;
+  max-width: 85%;
+  border: 1.5px solid rgba(239, 68, 68, 0.6);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.8), 0 0 14px rgba(239, 68, 68, 0.35);
+  cursor: pointer;
+}
+.active-workout-bottom-bar.minimized .active-workout-badge,
+.active-workout-bottom-bar.minimized .btn-rest-trigger,
+.active-workout-bottom-bar.minimized .btn-finish-workout {
+  display: none !important;
+}
+.active-workout-bottom-bar.minimized .active-workout-stats {
+  margin-top: 0;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 
