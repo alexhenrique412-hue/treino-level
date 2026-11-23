@@ -208,19 +208,13 @@
 
       <!-- VIEW 1: MEU TREINO DO DIA (ESTILO DA FOTO) -->
       <div id="viewWorkoutRoutine">
-        <!-- Division Pills (A, B, C, D, E...) -->
-        <div class="division-pills-bar" id="divisionPillsBar">
-          <!-- Rendered by JS -->
-        </div>
-
-        <!-- Active Day Header -->
-        <div class="card card-highlight" style="margin-bottom: 10px;">
+        <!-- Top Screen Header: Meu treino / salvo automaticamente (Screenshot 1) -->
+        <div class="workout-screen-header">
           <div style="display: flex; justify-content: space-between; align-items: flex-start;">
             <div>
-              <span style="font-size: 0.7rem; color: var(--accent-green); font-weight: 800; text-transform: uppercase;" id="workoutDayLabel">Segunda-feira</span>
-              <h2 style="font-size: 1.25rem; font-weight: 800; margin: 4px 0;" id="workoutDayTitle">Treino A • Peito & Tríceps</h2>
-              <div style="font-size: 0.72rem; color: var(--text-muted);" id="workoutMetaInfo">
-                <span id="workoutExCountText">0 exercícios</span> · <span id="workoutEstimatedTimeText">~45 min</span>
+              <h1 class="workout-main-heading">Meu treino</h1>
+              <div class="workout-auto-save-tag">
+                <span class="cloud-icon">☁️</span> salvo automaticamente
               </div>
             </div>
             <div style="display: flex; gap: 6px;">
@@ -230,26 +224,40 @@
           </div>
         </div>
 
-        <!-- Goal Banner like in the photo -->
+        <!-- Division Pills (A, B, C, D, E... + Divisão) -->
+        <div class="division-pills-bar" id="divisionPillsBar">
+          <!-- Rendered by JS -->
+        </div>
+
+        <!-- Division Title & Stats (Treino A · 6 exercícios · ~55 min) -->
+        <div class="workout-division-info-row">
+          <div style="display: none;" id="workoutDayLabel">Divisão</div>
+          <h2 class="workout-division-heading" id="workoutDayTitle">Treino A</h2>
+          <div class="workout-division-stats" id="workoutMetaInfo">
+            <span id="workoutExCountText">0 exercícios</span> · <span id="workoutEstimatedTimeText">~55 min</span>
+          </div>
+        </div>
+
+        <!-- Goal Banner (Screenshot 1) -->
         <div class="workout-goal-card">
-          <div style="display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
             <div style="display: flex; align-items: center; gap: 10px;">
-              <span style="font-size: 1.25rem;">⚙️</span>
+              <span class="goal-slider-icon">🎛️</span>
               <div>
-                <div style="font-size: 0.78rem; font-weight: 800; color: #f59e0b;">Padrão pelo seu objetivo · Hipertrofia</div>
-                <div style="font-size: 0.68rem; color: #cbd5e1;">3 × 8–12 reps · descanso 60–90s — foco em sobrecarga progressiva</div>
+                <div class="goal-title">Padrão pelo seu objetivo · Hipertrofia</div>
+                <div class="goal-subtitle">3 × 10–12 · descanso 90s — vale para cada exercício novo</div>
               </div>
             </div>
-            <button class="btn-xs btn-outline" onclick="openWorkoutTemplatesModal()" style="border-color: rgba(245,158,11,0.5); color: #f59e0b; padding: 4px 10px; font-size: 0.7rem; border-radius: 6px; cursor: pointer; background: transparent;">
+            <button class="btn-goal-alterar" onclick="openWorkoutTemplatesModal()">
               Alterar
             </button>
           </div>
         </div>
 
-        <!-- Live Workout Timer -->
-        <div class="live-timer-card">
+        <!-- Live Workout Timer (Disponível quando ativo) -->
+        <div class="live-timer-card" id="legacyLiveTimerCard" style="display: none;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 0.75rem; color: #93c5fd; font-weight: 700; text-transform: uppercase;">⏱️ Cronômetro da Sessão</span>
+            <span style="font-size: 0.75rem; color: #93c5fd; font-weight: 700; text-transform: uppercase;">⏱️ Sessão Ativa</span>
             <span style="font-size: 0.7rem; color: var(--text-muted);" id="timerPointsEstimate">+0.0 pt</span>
           </div>
           <div class="timer-digits" id="liveTimerDisplay">00:00:00</div>
@@ -259,28 +267,18 @@
             <button class="btn btn-orange" id="btnTimerFinish" onclick="finishWorkoutTimer()" style="display:none;">🏁 Finalizar & Pontuar</button>
             <button class="btn btn-danger" id="btnTimerReset" onclick="resetWorkoutTimer()" style="display:none;">✕</button>
           </div>
-          <small style="color: var(--text-muted); font-size: 0.68rem; display: block; margin-top: 8px;">
-            Ao finalizar, o tempo é somado às suas horas e convertido em pontos (2h = 1 pt)!
-          </small>
         </div>
 
-        <!-- Rest Timer Quick Trigger -->
-        <div style="display: flex; gap: 8px; align-items: center; margin-bottom: 14px; background: var(--bg-card); padding: 8px 12px; border-radius: var(--radius-sm); border: 1px solid var(--border-color);">
-          <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">Descanso:</span>
-          <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.7rem;" onclick="startRestTimer(30)">30s</button>
-          <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.7rem;" onclick="startRestTimer(60)">60s</button>
-          <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.7rem;" onclick="startRestTimer(90)">90s</button>
-          <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.7rem;" onclick="startRestTimer(120)">2min</button>
-        </div>
-
-        <!-- Exercise List Header & Add Button -->
-        <div class="card-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-          <span>Exercícios do Dia (<span id="exerciseCountBadge">0</span>)</span>
+        <!-- Exercise Action Header -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin: 16px 2px 10px;">
+          <span style="font-size: 0.82rem; font-weight: 800; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.5px;">
+            Exercícios (<span id="exerciseCountBadge">0</span>)
+          </span>
           <div style="display: flex; gap: 6px;">
-            <button type="button" class="btn btn-outline" style="padding: 6px 10px; font-size: 0.72rem; color: #38bdf8; border-color: rgba(56,189,248,0.4); display: flex; align-items: center; gap: 4px;" onclick="openWorkoutTemplatesModal()" title="Escolher ficha pronta para o dia">
-              📋 Planilhas Prontas
+            <button type="button" class="btn btn-outline" style="padding: 5px 10px; font-size: 0.72rem; color: #38bdf8; border-color: rgba(56,189,248,0.4); display: flex; align-items: center; gap: 4px;" onclick="openWorkoutTemplatesModal()" title="Escolher ficha pronta para o dia">
+              📋 Fichas Prontas
             </button>
-            <button type="button" class="btn btn-primary" style="padding: 6px 12px; font-size: 0.75rem;" onclick="openAddExerciseModal()">
+            <button type="button" class="btn btn-primary" style="padding: 5px 12px; font-size: 0.75rem;" onclick="openAddExerciseModal()">
               + Exercício
             </button>
           </div>
@@ -291,7 +289,7 @@
           <!-- Rendered by JS -->
         </div>
 
-        <!-- Botão Grande: Iniciar Treino (Estilo MetaFit) -->
+        <!-- Botão Grande: Iniciar Treino (Screenshot 2) -->
         <div class="start-workout-footer" id="startWorkoutFooter">
           <button class="btn-start-workout-pro" id="btnMainStartWorkout" onclick="startWorkoutSessionPro()">
             ▶ Iniciar Treino

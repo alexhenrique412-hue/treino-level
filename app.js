@@ -2815,9 +2815,10 @@ function populateExerciseCatalogCards() {
     };
 
     container.innerHTML = filtered.map(ex => {
+      const idx = EXERCISE_CATALOG.indexOf(ex);
       const emoji = muscleEmojis[ex.muscle] || "🏋️";
       return `
-        <div class="catalog-exercise-card" onclick="selectCatalogExercise('${ex.name.replace(/'/g, "\\'")}')">
+        <div class="catalog-exercise-card" data-idx="${idx}" onclick="selectCatalogExerciseByIndex(${idx})">
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px;">
             <strong style="color: #fff; font-size: 0.82rem;">${emoji} ${ex.name}</strong>
             <span style="font-size: 0.65rem; color: #00d2ff; background: rgba(0,210,255,0.14); padding: 2px 6px; border-radius: 4px; font-weight: 700; white-space: nowrap;">
@@ -2856,34 +2857,41 @@ function filterExercisesByMuscle(muscleGroup, btnElement) {
   populateExerciseCatalogCards();
 }
 
-function selectCatalogExercise(exName) {
-  if (!exName) return;
-  triggerHaptic('light');
-  const ex = EXERCISE_CATALOG.find(item => item.name === exName);
+function selectCatalogExerciseByIndex(idx) {
+  const ex = EXERCISE_CATALOG[idx];
   if (!ex) return;
+  triggerHaptic('light');
 
-  document.getElementById("exerciseNameInput").value = ex.name;
-  document.getElementById("exerciseSetsInput").value = ex.sets;
-  document.getElementById("exerciseRepsInput").value = ex.reps;
-  document.getElementById("exerciseRestInput").value = ex.rest;
-  document.getElementById("exerciseNotesInput").value = ex.notes;
+  const nameInput = document.getElementById("exerciseNameInput");
+  const setsInput = document.getElementById("exerciseSetsInput");
+  const repsInput = document.getElementById("exerciseRepsInput");
+  const restInput = document.getElementById("exerciseRestInput");
+  const notesInput = document.getElementById("exerciseNotesInput");
 
-  // Destaque visual no card selecionado
-  const cards = document.querySelectorAll(".catalog-exercise-card");
-  cards.forEach(c => {
-    if (c.innerText.includes(ex.name)) {
-      c.style.borderColor = "var(--accent-green)";
-      c.style.background = "rgba(0, 210, 255, 0.22)";
-    } else {
-      c.style.borderColor = "";
-      c.style.background = "";
-    }
-  });
+  if (nameInput) nameInput.value = ex.name;
+  if (setsInput) setsInput.value = ex.sets;
+  if (repsInput) repsInput.value = ex.reps;
+  if (restInput) restInput.value = ex.rest;
+  if (notesInput) notesInput.value = ex.notes;
+
+  // Destaque visual leve e seguro usando classe CSS (sem reflow infinito)
+  const prevSelected = document.querySelector(".catalog-exercise-card.selected-card");
+  if (prevSelected) prevSelected.classList.remove("selected-card");
+  const targetCard = document.querySelector(`.catalog-exercise-card[data-idx="${idx}"]`);
+  if (targetCard) targetCard.classList.add("selected-card");
 
   const tipBox = document.getElementById("exerciseExecutionTipBox");
   if (tipBox) {
     tipBox.style.display = "block";
-    tipBox.innerHTML = `💡 <strong>Dica de Execução para Novatos:</strong> ${ex.notes}`;
+    tipBox.innerHTML = `💡 <strong>Dica de Execução:</strong> ${ex.notes}`;
+  }
+}
+
+function selectCatalogExercise(exName) {
+  if (!exName) return;
+  const idx = EXERCISE_CATALOG.findIndex(item => item.name === exName);
+  if (idx !== -1) {
+    selectCatalogExerciseByIndex(idx);
   }
 }
 
@@ -3037,13 +3045,21 @@ function handleSaveExercise(e) {
   e.preventDefault();
   const exId = document.getElementById("exerciseId").value;
   const name = document.getElementById("exerciseNameInput").value.trim();
-  const sets = parseInt(document.getElementById("exerciseSetsInput").value, 10);
-  const reps = document.getElementById("exerciseRepsInput").value.trim();
+  const sets = parseInt(document.getElementById("exerciseSetsInput").value, 10) || 3;
+  const reps = document.getElementById("exerciseRepsInput").value.trim() || "10-12";
   const weight = parseFloat(document.getElementById("exerciseWeightInput").value) || 0;
   const rest = parseInt(document.getElementById("exerciseRestInput").value, 10) || 60;
   const notes = document.getElementById("exerciseNotesInput").value.trim();
 
-  const routine = STATE.routines[STATE.activeDayIndex];
+  const currentDay = (typeof STATE.activeDayIndex === 'number' && STATE.activeDayIndex >= 0) ? STATE.activeDayIndex : 0;
+  if (!STATE.routines) STATE.routines = JSON.parse(JSON.stringify(DEFAULT_WORKOUT_ROUTINES));
+  if (!STATE.routines[currentDay]) {
+    STATE.routines[currentDay] = { dayName: "Treino", title: "Meu Treino", exercises: [] };
+  }
+  const routine = STATE.routines[currentDay];
+  if (!routine.exercises) routine.exercises = [];
+
+  const detectedMuscle = detectMuscleForExercise(name, notes);
 
   if (exId) {
     // Edit
@@ -3055,19 +3071,25 @@ function handleSaveExercise(e) {
       item.weight = weight;
       item.rest = rest;
       item.notes = notes;
+      item.muscle = detectedMuscle;
+      ensureExerciseSeries(item);
     }
   } else {
     // Add new
-    routine.exercises.push({
+    const newEx = {
       id: "ex_" + Date.now(),
       name,
+      muscle: detectedMuscle,
       sets,
       reps,
       weight,
       rest,
       notes,
+      isBiSet: false,
       done: false
-    });
+    };
+    ensureExerciseSeries(newEx);
+    routine.exercises.push(newEx);
   }
 
   saveState();
@@ -4179,23 +4201,14 @@ function handleActiveWorkoutBarInfoClick() {
   }
 }
 
-// Sincroniza o estado de modais abertos no body para proteger botões de salvar contra sobreposição
-function setupModalZIndexWatcher() {
-  const syncModalState = () => {
-    const anyModalOpen = !!document.querySelector('.modal-backdrop.open, .onboarding-overlay[style*="display: flex"]');
-    if (anyModalOpen) {
-      document.body.classList.add('modal-open');
-    } else {
-      document.body.classList.remove('modal-open');
-    }
-  };
-
-  try {
-    const observer = new MutationObserver(syncModalState);
-    observer.observe(document.body, { attributes: true, subtree: true, attributeFilter: ['class', 'style'] });
-  } catch (e) {}
-
-  syncModalState();
+// Sincroniza o estado de modais abertos no body de forma segura sem MutationObserver
+function syncModalState() {
+  const anyModalOpen = !!document.querySelector('.modal-backdrop.open, .onboarding-overlay[style*="display: flex"]');
+  if (anyModalOpen) {
+    document.body.classList.add('modal-open');
+  } else {
+    document.body.classList.remove('modal-open');
+  }
 }
 
 // ATUALIZAR BARRA FIXA INFERIOR DO TREINO EM ANDAMENTO
@@ -4240,7 +4253,7 @@ function updateActiveWorkoutBottomBar() {
   if (progText) progText.innerText = `${completedSeries}/${totalSeries} SÉRIES · ${pct}%`;
 }
 
-// RENDERIZAR CARD INDIVIDUAL METAFIT COM TABELA DE SÉRIES
+// RENDERIZAR CARD INDIVIDUAL METAFIT COM TABELA DE SÉRIES (ESTILO DA FOTO)
 function renderExerciseCardMetaFit(ex, idx, isInsideBiset) {
   ensureExerciseSeries(ex);
   const muscle = ex.muscle || detectMuscleForExercise(ex.name, ex.notes);
@@ -4251,10 +4264,24 @@ function renderExerciseCardMetaFit(ex, idx, isInsideBiset) {
   const totalSets = ex.series.length;
   const completedSets = ex.series.filter(s => s.done).length;
 
+  // Resumo de Repetições e Cargas (Estilo Screenshot 1: 3 × 12·10·8 · 90s · 20·25·30 kg)
+  const repsArr = ex.series.map(s => s.reps).filter(r => r > 0);
+  const repsText = repsArr.length > 0 ? repsArr.join('·') : (ex.reps || "10-12");
+  const weightsArr = ex.series.map(s => s.weight).filter(w => w > 0);
+  let weightsText = "";
+  if (weightsArr.length > 0) {
+    const allSame = weightsArr.every(w => w === weightsArr[0]);
+    weightsText = allSame ? `${weightsArr[0]} kg` : `${weightsArr.join('·')} kg`;
+  } else if (ex.weight > 0) {
+    weightsText = `${ex.weight} kg`;
+  }
+  const restText = (ex.rest || 60) + "s";
+  const previewSubtitle = `${totalSets} × ${repsText} · ${restText}${weightsText ? ` · ${weightsText}` : ''}`;
+
   const seriesRowsHtml = ex.series.map(s => {
     const isChecked = !!s.done;
     const prevText = (s.prevWeight > 0 || s.prevReps > 0)
-      ? `${s.prevWeight}kg × ${s.prevReps} ⏱️ ${s.prevRest || ex.rest || 60}s`
+      ? `${s.prevWeight}kg × ${s.prevReps} · ${s.prevRest || ex.rest || 60}s`
       : `Novo · ${ex.rest || 60}s`;
 
     return `
@@ -4284,24 +4311,24 @@ function renderExerciseCardMetaFit(ex, idx, isInsideBiset) {
   return `
     <div class="exercise-card-metafit ${ex.isBiSet ? 'is-biset' : ''}" id="ex-card-${ex.id}">
       <div class="exercise-metafit-header" onclick="toggleExerciseExpand('${ex.id}')">
-        <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;">
-          <span class="exercise-order-num">${idx + 1}</span>
+        <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;">
+          <span class="drag-handle-dots" title="Arrastar">⋮⋮</span>
           <div class="exercise-thumb-mini" title="Foco Anatômico: ${targetLabel}">
             ${svgThumb}
           </div>
           <div style="min-width: 0; flex: 1;">
             <div class="exercise-metafit-title">
-              ${ex.name}
+              <span class="ex-name-text">${ex.name}</span>
               ${ex.isBiSet && !isInsideBiset ? '<span class="badge-biset-tag">BI-SET</span>' : ''}
             </div>
-            <div class="exercise-metafit-muscle">
-              ${targetLabel} · <strong>${completedSets}/${totalSets}</strong> séries concluídas
+            <div class="exercise-metafit-subtitle">
+              ${previewSubtitle}
             </div>
           </div>
         </div>
         <div style="display: flex; align-items: center; gap: 8px;">
           <button type="button" class="btn-exercise-header-check ${completedSets === totalSets && totalSets > 0 ? 'checked' : ''}" onclick="event.stopPropagation(); toggleAllExerciseSetsDone('${ex.id}')" title="Marcar/Desmarcar todas as séries">
-            ${completedSets === totalSets && totalSets > 0 ? '✓' : '○'}
+            ${completedSets === totalSets && totalSets > 0 ? '✓' : ''}
           </button>
           <span class="expand-chevron" style="transform: ${isExpanded ? 'rotate(180deg)' : 'rotate(0deg)'};">▼</span>
         </div>
@@ -4393,10 +4420,13 @@ function renderWorkoutRoutineView() {
 
   const estMinutes = Math.max(20, Math.round(totalSetsCount * 2.5));
 
-  if (labelEl) labelEl.innerText = routine.dayName || "Divisão";
-  if (titleEl) titleEl.innerText = routine.title || "Meu Treino";
+  const letters = ["A", "B", "C", "D", "E", "F", "G"];
+  const letter = letters[currentDay] || (currentDay + 1);
+
+  if (labelEl) labelEl.innerText = routine.dayName || `Divisão ${letter}`;
+  if (titleEl) titleEl.innerText = routine.title || `Treino ${letter}`;
   if (countEl) countEl.innerText = exList.length;
-  if (exCountText) exCountText.innerText = `${exList.length} exercícios (${totalSetsCount} séries)`;
+  if (exCountText) exCountText.innerText = `${exList.length} exercícios`;
   if (estTimeText) estTimeText.innerText = `~${estMinutes} min`;
 
   // 3. Exercise Cards MetaFit
@@ -4469,6 +4499,9 @@ function addExerciseFromGuide(catalogIdx) {
   if (!STATE.routines[currentDay]) {
     STATE.routines[currentDay] = { dayName: "Treino", title: "Meu Treino", exercises: [] };
   }
+  if (!STATE.routines[currentDay].exercises) {
+    STATE.routines[currentDay].exercises = [];
+  }
 
   const newExercise = {
     id: "ex_" + Date.now() + "_" + Math.random().toString(36).substr(2, 4),
@@ -4483,10 +4516,12 @@ function addExerciseFromGuide(catalogIdx) {
     done: false
   };
 
+  ensureExerciseSeries(newExercise);
   STATE.routines[currentDay].exercises.push(newExercise);
   saveState();
+  renderWorkoutRoutineView();
 
-  alert(`✔ "${exTemplate.name}" adicionado à sua ficha do dia!`);
+  showToast(`✔ "${exTemplate.name}" adicionado à sua ficha do dia!`);
 }
 
 function renderWorkoutGuideView() {
@@ -5540,6 +5575,6 @@ window.addEventListener("DOMContentLoaded", () => {
   restoreActiveRopeSession();
   checkExpiredRestTimer();
   checkFirstTimeOnboarding();
-  setupModalZIndexWatcher();
+  syncModalState();
   startAutoUpdateEngine();
 });
