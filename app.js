@@ -1066,12 +1066,41 @@ function syncAllTimersWithWallClock() {
   if (restEndTime) {
     tickRestTimer();
   }
-  if (gpsTracking && !gpsPaused) {
-    gpsElapsedSeconds = getActualGpsSeconds();
+  if (gpsTracking) {
+    if (!gpsPaused) {
+      gpsElapsedSeconds = getActualGpsSeconds();
+      if (!gpsTimerInterval) {
+        gpsTimerInterval = setInterval(() => {
+          if (!gpsPaused) {
+            gpsElapsedSeconds = getActualGpsSeconds();
+            updateGpsHud();
+          }
+        }, 1000);
+      }
+      if (navigator.geolocation && !gpsWatchId) {
+        gpsWatchId = navigator.geolocation.watchPosition(
+          handleGpsPosition,
+          handleGpsError,
+          { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
+        );
+      }
+    }
+    updateGpsButtons();
     updateGpsHud();
   }
-  if (ropeActive && !ropePaused) {
-    ropeElapsedSeconds = getActualRopeSeconds();
+  if (ropeActive) {
+    if (!ropePaused) {
+      ropeElapsedSeconds = getActualRopeSeconds();
+      if (!ropeTimerInterval) {
+        ropeTimerInterval = setInterval(() => {
+          if (!ropePaused) {
+            ropeElapsedSeconds = getActualRopeSeconds();
+            updateRopeHud();
+          }
+        }, 1000);
+      }
+    }
+    updateRopeButtons();
     updateRopeHud();
   }
 }
@@ -1099,6 +1128,47 @@ let gpsRoutePoints = [];
 let lastGpsPoint = null;
 let currentGpsActivity = 'run'; // 'run' | 'bike'
 
+// Atualiza o estado visual dos botões de corrida GPS (garante que nunca volte para Iniciar sozinho)
+function updateGpsButtons() {
+  const btnStart = document.getElementById("btnGpsStart");
+  const btnPause = document.getElementById("btnGpsPause");
+  const btnResume = document.getElementById("btnGpsResume");
+  const btnFinish = document.getElementById("btnGpsFinish");
+  const btnCancel = document.getElementById("btnGpsCancel");
+  const statusText = document.getElementById("gpsStatusText");
+  if (!btnStart) return;
+
+  if (gpsTracking) {
+    btnStart.style.display = "none";
+    if (btnFinish) btnFinish.style.display = "inline-flex";
+    if (btnCancel) btnCancel.style.display = "inline-flex";
+
+    if (gpsPaused) {
+      if (btnPause) btnPause.style.display = "none";
+      if (btnResume) btnResume.style.display = "inline-flex";
+      if (statusText) {
+        statusText.innerText = currentGpsActivity === 'bike'
+          ? "⏸ Ciclismo pausado. Toque em Continuar para retomar."
+          : "⏸ Corrida pausada. Toque em Continuar para retomar.";
+      }
+    } else {
+      if (btnPause) btnPause.style.display = "inline-flex";
+      if (btnResume) btnResume.style.display = "none";
+      if (statusText) {
+        statusText.innerText = currentGpsActivity === 'bike'
+          ? "🔴 Gravando pedalada GPS ao vivo... Bora pedalar! 🚴"
+          : "🔴 Gravando rota GPS ao vivo... Bora correr! 🏃";
+      }
+    }
+  } else {
+    btnStart.style.display = "inline-flex";
+    if (btnPause) btnPause.style.display = "none";
+    if (btnResume) btnResume.style.display = "none";
+    if (btnFinish) btnFinish.style.display = "none";
+    if (btnCancel) btnCancel.style.display = "none";
+  }
+}
+
 function getActualGpsSeconds() {
   if (gpsTracking && !gpsPaused && gpsStartTime) {
     const diff = Math.max(0, Math.floor((Date.now() - gpsStartTime) / 1000));
@@ -1117,6 +1187,8 @@ function saveActiveGpsSession() {
         accumulatedSeconds: gpsAccumulatedSeconds,
         totalKm: gpsTotalKm,
         activity: currentGpsActivity,
+        routePoints: (gpsRoutePoints || []).slice(-300),
+        lastPoint: lastGpsPoint,
         savedAt: Date.now()
       }));
     } else {
@@ -1140,14 +1212,39 @@ function restoreActiveGpsSession() {
     currentGpsActivity = s.activity || 'run';
     gpsTotalKm = s.totalKm || 0;
     gpsAccumulatedSeconds = s.accumulatedSeconds || 0;
+    if (Array.isArray(s.routePoints) && s.routePoints.length > 0) {
+      gpsRoutePoints = s.routePoints;
+    }
+    if (s.lastPoint) {
+      lastGpsPoint = s.lastPoint;
+    }
+
     if (!gpsPaused && s.startTime) {
       gpsStartTime = s.startTime;
       gpsElapsedSeconds = getActualGpsSeconds();
       startBackgroundWorkerTicker();
       requestScreenWakeLock();
+
+      if (gpsTimerInterval) clearInterval(gpsTimerInterval);
+      gpsTimerInterval = setInterval(() => {
+        if (!gpsPaused) {
+          gpsElapsedSeconds = getActualGpsSeconds();
+          updateGpsHud();
+        }
+      }, 1000);
+
+      if (navigator.geolocation && !gpsWatchId) {
+        gpsWatchId = navigator.geolocation.watchPosition(
+          handleGpsPosition,
+          handleGpsError,
+          { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
+        );
+      }
     } else {
       gpsElapsedSeconds = gpsAccumulatedSeconds;
     }
+
+    updateGpsButtons();
     updateGpsHud();
   } catch(e) {}
 }
@@ -1193,6 +1290,35 @@ function saveActiveRopeSession() {
   } catch(e) {}
 }
 
+function updateRopeButtons() {
+  const btnStart = document.getElementById("btnRopeStart");
+  const btnPause = document.getElementById("btnRopePause");
+  const btnResume = document.getElementById("btnRopeResume");
+  const btnFinish = document.getElementById("btnRopeFinish");
+  const btnCancel = document.getElementById("btnRopeCancel");
+  if (!btnStart) return;
+
+  if (ropeActive) {
+    btnStart.style.display = "none";
+    if (btnFinish) btnFinish.style.display = "inline-flex";
+    if (btnCancel) btnCancel.style.display = "inline-flex";
+
+    if (ropePaused) {
+      if (btnPause) btnPause.style.display = "none";
+      if (btnResume) btnResume.style.display = "inline-flex";
+    } else {
+      if (btnPause) btnPause.style.display = "inline-flex";
+      if (btnResume) btnResume.style.display = "none";
+    }
+  } else {
+    btnStart.style.display = "inline-flex";
+    if (btnPause) btnPause.style.display = "none";
+    if (btnResume) btnResume.style.display = "none";
+    if (btnFinish) btnFinish.style.display = "none";
+    if (btnCancel) btnCancel.style.display = "none";
+  }
+}
+
 function restoreActiveRopeSession() {
   try {
     const raw = localStorage.getItem(ROPE_TIMER_STORAGE_KEY);
@@ -1212,9 +1338,18 @@ function restoreActiveRopeSession() {
       ropeElapsedSeconds = getActualRopeSeconds();
       startBackgroundWorkerTicker();
       requestScreenWakeLock();
+
+      if (ropeTimerInterval) clearInterval(ropeTimerInterval);
+      ropeTimerInterval = setInterval(() => {
+        if (!ropePaused) {
+          ropeElapsedSeconds = getActualRopeSeconds();
+          updateRopeHud();
+        }
+      }, 1000);
     } else {
       ropeElapsedSeconds = ropeAccumulatedSeconds;
     }
+    updateRopeButtons();
     updateRopeHud();
   } catch(e) {}
 }
@@ -1242,10 +1377,14 @@ function switchRunSubtab(subtab) {
   if (subtab === 'gps') {
     if (gpsBtn) gpsBtn.classList.add("active");
     if (gpsView) gpsView.style.display = "block";
+    updateGpsButtons();
+    updateGpsHud();
     initRunMapIfNeeded();
   } else if (subtab === 'rope') {
     if (ropeBtn) ropeBtn.classList.add("active");
     if (ropeView) ropeView.style.display = "block";
+    updateRopeButtons();
+    updateRopeHud();
   } else {
     if (manualBtn) manualBtn.classList.add("active");
     if (manualView) manualView.style.display = "block";
@@ -1317,6 +1456,10 @@ function setGpsActivity(activity) {
 
 // --- JUMP ROPE LOGIC (Opção 1: Pular Corda com Acelerômetro Real) ---
 function startJumpRope() {
+  if (ropeActive) {
+    updateRopeButtons();
+    return;
+  }
   sfx.init();
   triggerHaptic('success');
 
@@ -1339,6 +1482,10 @@ function startJumpRope() {
 }
 
 function beginJumpRopeTracking() {
+  if (ropeActive) {
+    updateRopeButtons();
+    return;
+  }
   ropeActive = true;
   ropePaused = false;
   ropeJumpCount = 0;
@@ -1353,17 +1500,7 @@ function beginJumpRopeTracking() {
   saveActiveRopeSession();
 
   // Update UI buttons
-  const startBtn = document.getElementById("btnRopeStart");
-  const pauseBtn = document.getElementById("btnRopePause");
-  const resumeBtn = document.getElementById("btnRopeResume");
-  const finishBtn = document.getElementById("btnRopeFinish");
-  const cancelBtn = document.getElementById("btnRopeCancel");
-
-  if (startBtn) startBtn.style.display = "none";
-  if (pauseBtn) pauseBtn.style.display = "inline-flex";
-  if (resumeBtn) resumeBtn.style.display = "none";
-  if (finishBtn) finishBtn.style.display = "inline-flex";
-  if (cancelBtn) cancelBtn.style.display = "inline-flex";
+  updateRopeButtons();
 
   setRopeBadgeStatus("Pulando corda... Bora! 🪢", true);
   updateRopeHud();
@@ -1486,8 +1623,7 @@ function pauseJumpRope() {
   ropeStartTime = null;
   ropePaused = true;
   saveActiveRopeSession();
-  document.getElementById("btnRopePause").style.display = "none";
-  document.getElementById("btnRopeResume").style.display = "inline-flex";
+  updateRopeButtons();
   setRopeBadgeStatus("Treino de corda pausado ⏸️", false);
 }
 
@@ -1497,8 +1633,7 @@ function resumeJumpRope() {
   ropePaused = false;
   startBackgroundWorkerTicker();
   saveActiveRopeSession();
-  document.getElementById("btnRopeResume").style.display = "none";
-  document.getElementById("btnRopePause").style.display = "inline-flex";
+  updateRopeButtons();
   setRopeBadgeStatus("Pulando corda... Bora! 🪢", true);
 }
 
@@ -1524,18 +1659,7 @@ function stopJumpRopeTracking() {
     window.removeEventListener('devicemotion', ropeMotionHandler);
   }
   releaseScreenWakeLock();
-
-  const startBtn = document.getElementById("btnRopeStart");
-  const pauseBtn = document.getElementById("btnRopePause");
-  const resumeBtn = document.getElementById("btnRopeResume");
-  const finishBtn = document.getElementById("btnRopeFinish");
-  const cancelBtn = document.getElementById("btnRopeCancel");
-
-  if (startBtn) startBtn.style.display = "inline-flex";
-  if (pauseBtn) pauseBtn.style.display = "none";
-  if (resumeBtn) resumeBtn.style.display = "none";
-  if (finishBtn) finishBtn.style.display = "none";
-  if (cancelBtn) cancelBtn.style.display = "none";
+  updateRopeButtons();
 
   setRopeBadgeStatus("Pronto para iniciar", false);
 }
@@ -1734,6 +1858,11 @@ function calculateDistanceKm(lat1, lon1, lat2, lon2) {
 }
 
 function startGpsRun() {
+  if (gpsTracking) {
+    updateGpsButtons();
+    return;
+  }
+
   if (!navigator.geolocation) {
     alert("Geolocalização GPS não é suportada pelo seu navegador.");
     return;
@@ -1763,18 +1892,7 @@ function startGpsRun() {
   requestScreenWakeLock();
 
   // Update UI buttons
-  document.getElementById("btnGpsStart").style.display = "none";
-  document.getElementById("btnGpsPause").style.display = "inline-flex";
-  document.getElementById("btnGpsFinish").style.display = "inline-flex";
-  document.getElementById("btnGpsCancel").style.display = "inline-flex";
-  document.getElementById("btnGpsResume").style.display = "none";
-
-  const statusText = document.getElementById("gpsStatusText");
-  if (statusText) {
-    statusText.innerText = currentGpsActivity === 'bike' 
-      ? "🔴 Gravando pedalada GPS ao vivo... Bora pedalar! 🚴" 
-      : "🔴 Gravando rota GPS ao vivo... Bora correr! 🏃";
-  }
+  updateGpsButtons();
 
   // Start Live Timer (Imune ao bloqueio de tela)
   gpsStartTime = Date.now();
@@ -1898,14 +2016,7 @@ function pauseGpsRun() {
   gpsStartTime = null;
   gpsPaused = true;
   saveActiveGpsSession();
-  document.getElementById("btnGpsPause").style.display = "none";
-  document.getElementById("btnGpsResume").style.display = "inline-flex";
-  const statusText = document.getElementById("gpsStatusText");
-  if (statusText) {
-    statusText.innerText = currentGpsActivity === 'bike'
-      ? "⏸ Ciclismo pausado. Toque em Continuar para retomar."
-      : "⏸ Corrida pausada. Toque em Continuar para retomar.";
-  }
+  updateGpsButtons();
 }
 
 function resumeGpsRun() {
@@ -1914,14 +2025,7 @@ function resumeGpsRun() {
   gpsPaused = false;
   startBackgroundWorkerTicker();
   saveActiveGpsSession();
-  document.getElementById("btnGpsResume").style.display = "none";
-  document.getElementById("btnGpsPause").style.display = "inline-flex";
-  const statusText = document.getElementById("gpsStatusText");
-  if (statusText) {
-    statusText.innerText = currentGpsActivity === 'bike'
-      ? "🔴 Gravando pedalada GPS ao vivo... Bora pedalar! 🚴"
-      : "🔴 Gravando rota GPS ao vivo... Bora correr! 🏃";
-  }
+  updateGpsButtons();
 }
 
 function cancelGpsRun() {
@@ -1948,12 +2052,7 @@ function stopGpsTracking() {
     gpsTimerInterval = null;
   }
   releaseScreenWakeLock();
-
-  document.getElementById("btnGpsStart").style.display = "inline-flex";
-  document.getElementById("btnGpsPause").style.display = "none";
-  document.getElementById("btnGpsResume").style.display = "none";
-  document.getElementById("btnGpsFinish").style.display = "none";
-  document.getElementById("btnGpsCancel").style.display = "none";
+  updateGpsButtons();
 
   const statusText = document.getElementById("gpsStatusText");
   if (statusText) {
@@ -4627,6 +4726,10 @@ function renderRunningTab() {
       `;
     }).join('');
   }
+  updateGpsButtons();
+  updateGpsHud();
+  updateRopeButtons();
+  updateRopeHud();
 }
 
 // --- GLOBAL LEADERBOARD & HERO RANKING ENGINE ---
