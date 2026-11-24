@@ -2645,80 +2645,160 @@ function editWorkoutTitle() {
 
 // --- EXERCISE CATALOG FOR BEGINNERS & QUICK SELECTOR ---
 const EXERCISE_CATALOG = [
-  // PEITO
-  { muscle: "peito", name: "Supino Reto com Barra", sets: 4, reps: "8-10", rest: 60, notes: "Desça a barra no meio do peito com controle, sem bater." },
-  { muscle: "peito", name: "Supino Inclinado com Halteres", sets: 4, reps: "10-12", rest: 60, notes: "Banco em 30-45 graus. Foco na porção superior do peitoral." },
-  { muscle: "peito", name: "Supino Reto com Halteres", sets: 4, reps: "10-12", rest: 60, notes: "Maior amplitude de movimento e estabilidade para os ombros." },
-  { muscle: "peito", name: "Crucifixo na Polia (Crossover)", sets: 3, reps: "12-15", rest: 45, notes: "Aperte 1 segundo no pico de contração no centro." },
-  { muscle: "peito", name: "Voador / Peck Deck Máquina", sets: 3, reps: "12-15", rest: 45, notes: "Excelente para novatos aprenderem o isolamento do peitoral." },
-  { muscle: "peito", name: "Supino Máquina Articulada", sets: 4, reps: "10-12", rest: 60, notes: "Muito seguro para iniciantes aumentarem a carga com firmeza." },
-  { muscle: "peito", name: "Flexão de Braço (Solo)", sets: 3, reps: "10-15", rest: 60, notes: "Corpo em linha reta e abdômen contraído o tempo todo." },
+  // ================= PEITO =================
+  { muscle: "peito", name: "Supino Reto com Barra", sets: 4, reps: "8-10", rest: 90, notes: "Desça a barra no meio do peito com controle, sem bater. Mantenha as escápulas aduzidas." },
+  { muscle: "peito", name: "Supino Reto com Halteres", sets: 4, reps: "10-12", rest: 60, notes: "Maior amplitude de movimento e proteção para os ombros. Alongue bem embaixo." },
+  { muscle: "peito", name: "Supino Inclinado com Barra", sets: 4, reps: "8-10", rest: 90, notes: "Banco em 30-45 graus. Foco na porção superior clavicular do peitoral." },
+  { muscle: "peito", name: "Supino Inclinado com Halteres", sets: 4, reps: "10-12", rest: 60, notes: "Suba convergindo levemente os halteres sem encostá-los. Excelente para a parte de cima do peito." },
+  { muscle: "peito", name: "Supino Inclinado no Smith", sets: 4, reps: "10-12", rest: 60, notes: "Trajetória fixa que permite focar 100% na contração muscular com total segurança." },
+  { muscle: "peito", name: "Supino Declinado com Barra", sets: 3, reps: "10-12", rest: 60, notes: "Foco na porção inferior do peitoral (linha do peito). Mantenha pegada firme." },
+  { muscle: "peito", name: "Supino Declinado com Halteres", sets: 3, reps: "10-12", rest: 60, notes: "Ótima ativação inferior com rotação natural dos punhos." },
+  { muscle: "peito", name: "Supino Máquina Articulada", sets: 4, reps: "10-12", rest: 60, notes: "Muito seguro para iniciantes aumentarem a carga com firmeza e sem risco de lesão." },
+  { muscle: "peito", name: "Supino Reto no Smith", sets: 4, reps: "8-10", rest: 75, notes: "Controle absoluto de descida com travas de segurança ativas." },
+  { muscle: "peito", name: "Crucifixo Reto com Halteres", sets: 3, reps: "12-15", rest: 60, notes: "Cotovelos levemente flexionados, sinta o peitoral abrir e alongar ao máximo." },
+  { muscle: "peito", name: "Crucifixo Inclinado com Halteres", sets: 3, reps: "12-15", rest: 60, notes: "Alongamento profundo do peitoral superior. Não flexione excessivamente os braços." },
+  { muscle: "peito", name: "Crucifixo na Polia (Crossover Médio)", sets: 3, reps: "12-15", rest: 45, notes: "Polias na altura do peito. Tensão contínua, aperte 1s no centro." },
+  { muscle: "peito", name: "Crossover na Polia Alta (Foco Inferior)", sets: 3, reps: "12-15", rest: 45, notes: "Puxe as manoplas para baixo e para frente, desenhando o contorno inferior do peito." },
+  { muscle: "peito", name: "Crossover na Polia Baixa (Foco Superior)", sets: 3, reps: "12-15", rest: 45, notes: "Puxe as polias de baixo para cima até a altura do queixo, ativando peitoral clavicular." },
+  { muscle: "peito", name: "Voador / Peck Deck Máquina", sets: 3, reps: "12-15", rest: 45, notes: "Excelente para novatos aprenderem o isolamento do peitoral. Aperte 2s fechado." },
+  { muscle: "peito", name: "Flexão de Braço (Solo)", sets: 3, reps: "10-15", rest: 60, notes: "Corpo em linha reta e abdômen contraído. Se for difícil, apoie os joelhos no solo." },
+  { muscle: "peito", name: "Flexão de Braço Declinada", sets: 3, reps: "10-12", rest: 60, notes: "Pés apoiados no banco e mãos no chão. Foco na porção superior e deltoides." },
+  { muscle: "peito", name: "Flexão de Braço Inclinada", sets: 3, reps: "12-15", rest: 45, notes: "Mãos apoiadas no banco e pés no chão. Variação suave e perfeita para aquecimento." },
+  { muscle: "peito", name: "Paralelas com Tronco Inclinado (Dips)", sets: 3, reps: "8-12", rest: 90, notes: "Incline o tronco 30° para frente e cotovelos abertos para transferir a tensão ao peito." },
+  { muscle: "peito", name: "Pullover com Halter", sets: 3, reps: "12-15", rest: 60, notes: "Deitado atravessado no banco, desça o halter atrás da cabeça expandindo a caixa torácica." },
 
-  // COSTAS
-  { muscle: "costas", name: "Puxada Frontal Alta na Polia", sets: 4, reps: "8-10", rest: 60, notes: "Puxe a barra até a altura do queixo, estufando o peito." },
-  { muscle: "costas", name: "Remada Baixa no Triângulo", sets: 4, reps: "10-12", rest: 60, notes: "Coluna ereta, puxe o triângulo no abdômen sem curvar as costas." },
-  { muscle: "costas", name: "Remada Curvada com Barra", sets: 3, reps: "8-10", rest: 90, notes: "Tronco inclinado a 45 graus, puxe a barra rente às pernas." },
-  { muscle: "costas", name: "Pulldown na Polia (Corda/Barra)", sets: 3, reps: "12-15", rest: 45, notes: "Braços estendidos, ative as costas (dorsais) sem dobrar cotovelos." },
-  { muscle: "costas", name: "Remada Unilateral com Halter (Serrote)", sets: 3, reps: "10-12", rest: 45, notes: "Apoie o joelho no banco e puxe o halter rente ao quadril." },
-  { muscle: "costas", name: "Remada Máquina Articulada", sets: 4, reps: "10-12", rest: 60, notes: "Apoio no peito para proteger a lombar do iniciante." },
-  { muscle: "costas", name: "Barra Fixa (Graviton ou Livre)", sets: 3, reps: "6-10", rest: 90, notes: "Exercício rei para abrir as costas e ganhar força." },
+  // ================= COSTAS =================
+  { muscle: "costas", name: "Puxada Frontal Aberta na Polia", sets: 4, reps: "8-10", rest: 75, notes: "Puxe a barra até a altura da clavícula, estufando o peito e puxando os cotovelos para baixo." },
+  { muscle: "costas", name: "Puxada com Triângulo (Pegada Fechada)", sets: 4, reps: "10-12", rest: 60, notes: "Pegada neutra confortável, atinge em cheio a espessura e densidade das dorsais." },
+  { muscle: "costas", name: "Puxada com Pegada Supinada (Invertida)", sets: 3, reps: "10-12", rest: 60, notes: "Palmas voltadas para você, maior ativação de dorsais inferiores e bíceps." },
+  { muscle: "costas", name: "Puxada Unilateral na Polia", sets: 3, reps: "12-15", rest: 45, notes: "Puxe focando um lado de cada vez, corrigindo assimetrias e garantindo amplitude máxima." },
+  { muscle: "costas", name: "Barra Fixa Pronada (Livre ou Graviton)", sets: 3, reps: "6-10", rest: 90, notes: "Exercício rei para abrir as costas em V. Use o graviton se ainda não conseguir subir o peso corporal." },
+  { muscle: "costas", name: "Barra Fixa Supinada / Chin-Up", sets: 3, reps: "6-10", rest: 90, notes: "Pegada invertida que confere tremenda força nas costas e bíceps." },
+  { muscle: "costas", name: "Remada Curvada com Barra (Pronada)", sets: 4, reps: "8-10", rest: 90, notes: "Tronco inclinado a 45°, coluna travada, puxe a barra rente às pernas até o umbigo." },
+  { muscle: "costas", name: "Remada Curvada com Barra (Supinada)", sets: 4, reps: "8-10", rest: 90, notes: "Pegada do Dorian Yates. Maior recrutamento das dorsais inferiores e força." },
+  { muscle: "costas", name: "Remada Curvada com Halteres", sets: 3, reps: "10-12", rest: 60, notes: "Tronco inclinado, permite rotação natural dos punhos e excelente amplitude." },
+  { muscle: "costas", name: "Remada Baixa no Triângulo", sets: 4, reps: "10-12", rest: 60, notes: "Coluna ereta, puxe o triângulo no abdômen sem curvar as costas ao estender os braços." },
+  { muscle: "costas", name: "Remada Baixa com Barra Reta", sets: 3, reps: "10-12", rest: 60, notes: "Pegada pronada aberta, trabalha a porção média das costas e romboides." },
+  { muscle: "costas", name: "Remada Unilateral com Halter (Serrote)", sets: 3, reps: "10-12", rest: 45, notes: "Apoie o joelho no banco e puxe o halter rente ao quadril sem girar a coluna." },
+  { muscle: "costas", name: "Remada Cavalinho / T-Bar Row", sets: 4, reps: "8-10", rest: 90, notes: "Excelente construtor de espessura para as costas. Mantenha a lombar travada." },
+  { muscle: "costas", name: "Remada Máquina Articulada", sets: 4, reps: "10-12", rest: 60, notes: "Apoio no peito para descarregar a lombar do iniciante e focar no miolo das costas." },
+  { muscle: "costas", name: "Remada no Banco Inclinado (Seal Row)", sets: 3, reps: "10-12", rest: 60, notes: "Deitado de bruços no banco inclinado, zero impulso na lombar, contração pura." },
+  { muscle: "costas", name: "Pulldown na Polia com Corda", sets: 3, reps: "12-15", rest: 45, notes: "Braços estendidos, puxe a corda abrindo nas laterais da coxa com as dorsais." },
+  { muscle: "costas", name: "Pulldown na Polia com Barra Reta", sets: 3, reps: "12-15", rest: 45, notes: "Isolamento das grandes dorsais sem envolver o bíceps no movimento." },
+  { muscle: "costas", name: "Levantamento Terra Clássico (Deadlift)", sets: 4, reps: "5-8", rest: 120, notes: "Construtor de força global. Mantenha a barra colada nas canelas e peito estufado." },
+  { muscle: "costas", name: "Extensão Lombar no Banco Romano", sets: 3, reps: "15", rest: 45, notes: "Fortalece os eretores da espinha e protege a coluna contra dores diárias." },
+  { muscle: "costas", name: "Bom Dia (Good Morning com Barra)", sets: 3, reps: "10-12", rest: 60, notes: "Barra nas costas, flexione o quadril para trás mantendo coluna reta." },
 
-  // PERNAS (QUADRÍCEPS)
-  { muscle: "pernas", name: "Agachamento Livre com Barra", sets: 4, reps: "8-10", rest: 90, notes: "Pés na largura dos ombros, desça até 90 graus ou mais." },
-  { muscle: "pernas", name: "Leg Press 45°", sets: 4, reps: "10-12", rest: 90, notes: "Não trave os joelhos no topo, desça bem controlando o peso." },
-  { muscle: "pernas", name: "Cadeira Extensora", sets: 4, reps: "12-15", rest: 45, notes: "Segure 1 segundo no topo contraindo a coxa fortemente." },
-  { muscle: "pernas", name: "Agachamento no Hack Machine", sets: 4, reps: "10-12", rest: 90, notes: "Encosto apoiado, excelente e seguro para as pernas do novato." },
-  { muscle: "pernas", name: "Agachamento Búlgaro com Halteres", sets: 3, reps: "10-12", rest: 60, notes: "Pé de trás apoiado no banco, foco total na perna da frente." },
-  { muscle: "pernas", name: "Afundo / Passada com Halteres", sets: 3, reps: "12 passos", rest: 60, notes: "Passo firme mantendo o tronco ereto e equilibrado." },
-  { muscle: "pernas", name: "Agachamento Goblet com Halter", sets: 3, reps: "12-15", rest: 60, notes: "Segure o halter junto ao peito, perfeito para aprender a agachar." },
+  // ================= PERNAS (QUADRÍCEPS) =================
+  { muscle: "pernas", name: "Agachamento Livre com Barra", sets: 4, reps: "8-10", rest: 90, notes: "Pés na largura dos ombros, desça até 90° ou mais sem curvar a lombar." },
+  { muscle: "pernas", name: "Leg Press 45°", sets: 4, reps: "10-12", rest: 90, notes: "Não trave os joelhos no topo, desça bem controlando a descida com segurança." },
+  { muscle: "pernas", name: "Cadeira Extensora", sets: 4, reps: "12-15", rest: 45, notes: "Segure 1 segundo no topo contraindo a coxa fortemente. Pico de tensão no quadríceps." },
+  { muscle: "pernas", name: "Agachamento no Hack Machine", sets: 4, reps: "10-12", rest: 90, notes: "Encosto apoiado, excelente e seguro para focar no vasto lateral e quadríceps." },
+  { muscle: "pernas", name: "Agachamento no Smith Machine", sets: 4, reps: "10-12", rest: 75, notes: "Posicione os pés ligeiramente à frente para aliviar joelhos e focar nas coxas." },
+  { muscle: "pernas", name: "Agachamento Frontal com Barra", sets: 3, reps: "8-10", rest: 90, notes: "Barra apoiada nos deltoides frontais, tronco bem ereto, foco brutal no quadríceps." },
+  { muscle: "pernas", name: "Leg Press Horizontal", sets: 3, reps: "12-15", rest: 60, notes: "Movimento suave e fácil de calibrar para iniciantes." },
+  { muscle: "pernas", name: "Agachamento Búlgaro com Halteres", sets: 3, reps: "10-12", rest: 60, notes: "Pé de trás apoiado no banco, foco total e isolado na perna da frente." },
+  { muscle: "pernas", name: "Agachamento Búlgaro no Smith", sets: 3, reps: "10-12", rest: 60, notes: "Estabilidade perfeita para progredir carga no búlgaro com controle." },
+  { muscle: "pernas", name: "Afundo / Passada com Halteres", sets: 3, reps: "12 passos", rest: 60, notes: "Passo firme mantendo o tronco ereto, excelente para tônus e glúteos." },
+  { muscle: "pernas", name: "Passada com Barra nas Costas", sets: 3, reps: "10-12 passos", rest: 75, notes: "Variação de força e equilíbrio que desenvolve estabilidade do core." },
+  { muscle: "pernas", name: "Agachamento Goblet com Halter", sets: 3, reps: "12-15", rest: 60, notes: "Segure o halter junto ao peito, perfeito para aprender o padrão de agachar." },
+  { muscle: "pernas", name: "Agachamento Sissy (Sissy Squat)", sets: 3, reps: "12-15", rest: 45, notes: "Alongamento e queimação extrema no reto femoral da coxa." },
+  { muscle: "pernas", name: "Agachamento Sumô com Halter", sets: 3, reps: "12-15", rest: 60, notes: "Pés afastados e pontas viradas a 45°, ativa adutores e glúteos." },
 
-  // POSTERIOR & GLÚTEOS
-  { muscle: "posterior", name: "Mesa Flexora", sets: 4, reps: "10-12", rest: 60, notes: "Puxe os calcanhares no glúteo sem tirar o quadril do banco." },
-  { muscle: "posterior", name: "Cadeira Flexora", sets: 4, reps: "12-15", rest: 45, notes: "Ajuste o rolo nos tornozelos e flexione as pernas para baixo." },
-  { muscle: "posterior", name: "Stiff com Barra ou Halteres", sets: 4, reps: "10-12", rest: 60, notes: "Coluna reta e joelhos semi-flexionados, sinta o posterior alongar." },
-  { muscle: "posterior", name: "Elevação Pélvica com Barra/Halter", sets: 4, reps: "10-12", rest: 60, notes: "Apoie as costas no banco e aperte o glúteo 2s no topo." },
-  { muscle: "posterior", name: "Cadeira Abdutora", sets: 3, reps: "15-20", rest: 45, notes: "Abra as pernas controlando o movimento, foco no glúteo médio." },
-  { muscle: "posterior", name: "Cadeira Adutora", sets: 3, reps: "15-20", rest: 45, notes: "Feche as pernas com força, foco na parte interna da coxa." },
+  // ================= POSTERIOR DE COXA & GLÚTEOS =================
+  { muscle: "posterior", name: "Mesa Flexora", sets: 4, reps: "10-12", rest: 60, notes: "Puxe os calcanhares no glúteo sem tirar o quadril do estofado na subida." },
+  { muscle: "posterior", name: "Cadeira Flexora", sets: 4, reps: "12-15", rest: 45, notes: "Ajuste o rolo nos tornozelos e flexione as pernas para baixo com amplitude." },
+  { muscle: "posterior", name: "Flexora em Pé Unilateral", sets: 3, reps: "12-15", rest: 45, notes: "Isole cada perna individualmente, corrigindo desequilíbrios entre os lados." },
+  { muscle: "posterior", name: "Stiff com Barra", sets: 4, reps: "10-12", rest: 60, notes: "Coluna reta e joelhos semi-flexionados, sinta o posterior alongar ao descer." },
+  { muscle: "posterior", name: "Stiff com Halteres", sets: 4, reps: "10-12", rest: 60, notes: "Halteres descem rente às pernas com pegada neutra confortável." },
+  { muscle: "posterior", name: "Levantamento Terra Romeno (RDL)", sets: 4, reps: "8-10", rest: 90, notes: "Inicie o movimento empurrando o quadril para trás, foco puro no posterior." },
+  { muscle: "posterior", name: "Elevação Pélvica com Barra (Hip Thrust)", sets: 4, reps: "10-12", rest: 75, notes: "Costas no banco, empurre os calcanhares no chão e esmague o glúteo 2s no topo." },
+  { muscle: "posterior", name: "Elevação Pélvica na Máquina", sets: 4, reps: "12-15", rest: 60, notes: "Segurança total no cinto da máquina, perfeita para colocar carga no glúteo." },
+  { muscle: "posterior", name: "Cadeira Abdutora", sets: 3, reps: "15-20", rest: 45, notes: "Abra as pernas controlando o movimento, foco no glúteo médio e contorno do quadril." },
+  { muscle: "posterior", name: "Cadeira Adutora", sets: 3, reps: "15-20", rest: 45, notes: "Feche as pernas com firmeza, fortalecendo a parte interna da coxa." },
+  { muscle: "posterior", name: "Glúteo no Cabo / Coice na Polia", sets: 3, reps: "12-15", rest: 45, notes: "Prenda a tornozeleira na polia baixa e chute para trás e para o alto." },
+  { muscle: "posterior", name: "Glúteo 4 Apoios com Caneleira", sets: 3, reps: "15-20", rest: 45, notes: "Movimento cadenciado de extensão de quadril no solo sem arquear a coluna." },
+  { muscle: "posterior", name: "Glúteo na Máquina (Kickback Machine)", sets: 3, reps: "12-15", rest: 45, notes: "Empurre a plataforma com o calcanhar focando na contração máxima do glúteo." },
 
-  // OMBROS
-  { muscle: "ombros", name: "Desenvolvimento com Halteres", sets: 4, reps: "8-10", rest: 60, notes: "Suba os halteres em arco sem bater em cima, desça a 90 graus." },
-  { muscle: "ombros", name: "Elevação Lateral com Halteres", sets: 4, reps: "12-15", rest: 45, notes: "Cotovelos levemente dobrados, erga até a linha do ombro." },
-  { muscle: "ombros", name: "Elevação Lateral na Polia", sets: 3, reps: "12-15", rest: 45, notes: "Tensão constante desde o início do movimento." },
-  { muscle: "ombros", name: "Crucifixo Invertido na Máquina", sets: 3, reps: "12-15", rest: 45, notes: "Foco no deltoide posterior para desenhar a parte de trás do ombro." },
-  { muscle: "ombros", name: "Elevação Frontal com Halteres", sets: 3, reps: "12", rest: 45, notes: "Erga os braços alternados até a altura dos olhos." },
-  { muscle: "ombros", name: "Face Pull na Polia com Corda", sets: 3, reps: "15", rest: 45, notes: "Puxe a corda em direção ao rosto com cotovelos bem altos." },
+  // ================= OMBROS (DELTOIDES) =================
+  { muscle: "ombros", name: "Desenvolvimento com Halteres", sets: 4, reps: "8-10", rest: 60, notes: "Suba os halteres em arco suave sem bater em cima, desça a 90 graus." },
+  { muscle: "ombros", name: "Desenvolvimento Militar com Barra (OHP)", sets: 4, reps: "6-8", rest: 90, notes: "Em pé ou sentado, empurre a barra acima da cabeça travando o abdômen." },
+  { muscle: "ombros", name: "Desenvolvimento no Smith Machine", sets: 4, reps: "10-12", rest: 60, notes: "Trajetória reta guiada que permite focar na sobrecarga do deltoide anterior." },
+  { muscle: "ombros", name: "Desenvolvimento na Máquina Articulada", sets: 4, reps: "10-12", rest: 60, notes: "Muito seguro para treinar até a falha sem medo de derrubar pesos." },
+  { muscle: "ombros", name: "Desenvolvimento Arnold (Arnold Press)", sets: 3, reps: "10-12", rest: 60, notes: "Inicie com palmas viradas para você e gire durante a subida, ativando todas as cabeças." },
+  { muscle: "ombros", name: "Elevação Lateral com Halteres", sets: 4, reps: "12-15", rest: 45, notes: "Cotovelos levemente flexionados, erga até a linha do ombro para alargar o shape." },
+  { muscle: "ombros", name: "Elevação Lateral na Polia (Cabo)", sets: 3, reps: "12-15", rest: 45, notes: "Tensão constante desde o início do movimento até o final da descida." },
+  { muscle: "ombros", name: "Elevação Lateral no Banco Inclinado", sets: 3, reps: "12-15", rest: 45, notes: "Deite de lado no banco inclinado a 60°, remove qualquer impulso do tronco." },
+  { muscle: "ombros", name: "Elevação Lateral na Máquina", sets: 3, reps: "15", rest: 45, notes: "Apoie os braços nos roletes e concentre-se na queimação lateral." },
+  { muscle: "ombros", name: "Elevação Frontal com Halteres", sets: 3, reps: "12", rest: 45, notes: "Erga os braços alternados até a altura dos olhos sem balançar as costas." },
+  { muscle: "ombros", name: "Elevação Frontal na Polia com Barra/Corda", sets: 3, reps: "12-15", rest: 45, notes: "Passe o cabo entre as pernas e puxe para frente até a altura do queixo." },
+  { muscle: "ombros", name: "Crucifixo Invertido na Máquina", sets: 4, reps: "12-15", rest: 45, notes: "Foco no deltoide posterior para desenhar a parte de trás do ombro e postura." },
+  { muscle: "ombros", name: "Crucifixo Invertido com Halteres", sets: 3, reps: "12-15", rest: 45, notes: "Tronco inclinado para frente ou deitado no banco, abra os braços como asas." },
+  { muscle: "ombros", name: "Face Pull na Polia com Corda", sets: 3, reps: "15", rest: 45, notes: "Puxe a corda em direção ao nariz abrindo as mãos com cotovelos bem altos." },
+  { muscle: "ombros", name: "Remada Alta com Barra W", sets: 3, reps: "12", rest: 60, notes: "Pegada na largura dos ombros, suba puxando os cotovelos para o teto." },
+  { muscle: "ombros", name: "Rotação Externa na Polia (Manguito Rotador)", sets: 3, reps: "15-20", rest: 30, notes: "Fundamental para saúde articular do ombro e prevenção de dores." },
 
-  // BÍCEPS & ANTEBRAÇO
-  { muscle: "biceps", name: "Rosca Direta com Barra W", sets: 4, reps: "10-12", rest: 60, notes: "Cotovelos colados ao tronco, suba sem balançar a lombar." },
-  { muscle: "biceps", name: "Rosca Martelo com Halteres", sets: 3, reps: "10-12", rest: 45, notes: "Pegada neutra (palmas voltadas para dentro), engrossa o braço." },
-  { muscle: "biceps", name: "Rosca Scott na Máquina", sets: 3, reps: "10-12", rest: 60, notes: "Isolamento total do bíceps com apoio seguro nos braços." },
-  { muscle: "biceps", name: "Rosca no Banco Inclinado 45°", sets: 3, reps: "10-12", rest: 60, notes: "Alongamento máximo do bíceps, excelente para o pico muscular." },
-  { muscle: "biceps", name: "Rosca Concentrada com Halter", sets: 3, reps: "12", rest: 45, notes: "Cotovelo apoiado na parte interna da coxa, foco e contração." },
-  { muscle: "biceps", name: "Rosca na Polia Baixa", sets: 3, reps: "12-15", rest: 45, notes: "Cabo puxando constantemente, sem ponto de descanso." },
-  { muscle: "biceps", name: "Flexão de Punho para Antebraço", sets: 3, reps: "15-20", rest: 40, notes: "Apoie os antebraços no banco e flexione os punhos para cima." },
+  // ================= BÍCEPS & ANTEBRAÇO =================
+  { muscle: "biceps", name: "Rosca Direta com Barra W", sets: 4, reps: "10-12", rest: 60, notes: "Cotovelos colados ao tronco, suba sem balançar a lombar e desça devagar." },
+  { muscle: "biceps", name: "Rosca Direta com Barra Reta", sets: 3, reps: "8-10", rest: 60, notes: "Supinação total dos punhos, excelente pico de contração no bíceps." },
+  { muscle: "biceps", name: "Rosca Alternada com Halteres em Pé", sets: 3, reps: "10-12", rest: 45, notes: "Gire o punho para fora na subida (supinação) para máxima ativação." },
+  { muscle: "biceps", name: "Rosca Martelo com Halteres", sets: 4, reps: "10-12", rest: 45, notes: "Pegada neutra (palmas voltadas para dentro), engrossa o braço e braquial." },
+  { muscle: "biceps", name: "Rosca Martelo na Polia com Corda", sets: 3, reps: "12-15", rest: 45, notes: "Tensão firme da polia baixa na pegada neutra durante todo o trajeto." },
+  { muscle: "biceps", name: "Rosca Scott com Barra W", sets: 3, reps: "10-12", rest: 60, notes: "Braços apoiados no banco Scott, impede qualquer roubo ou impulso." },
+  { muscle: "biceps", name: "Rosca Scott na Máquina", sets: 3, reps: "10-12", rest: 60, notes: "Isolamento total com resistência uniforme em toda a extensão do braço." },
+  { muscle: "biceps", name: "Rosca no Banco Inclinado 45°", sets: 3, reps: "10-12", rest: 60, notes: "Alongamento máximo da cabeça longa do bíceps, constrói pico muscular." },
+  { muscle: "biceps", name: "Rosca Concentrada com Halter", sets: 3, reps: "12", rest: 45, notes: "Cotovelo apoiado na coxa interna, concentre-se em fechar o bíceps no topo." },
+  { muscle: "biceps", name: "Rosca Spider no Banco 45°", sets: 3, reps: "12", rest: 45, notes: "De bruços no banco inclinado, braços soltos na vertical, pico de contração." },
+  { muscle: "biceps", name: "Rosca na Polia Baixa com Barra Reta", sets: 3, reps: "12-15", rest: 45, notes: "O cabo puxa para baixo continuamente, sem ponto cego de descanso." },
+  { muscle: "biceps", name: "Rosca Hércules na Polia Alta", sets: 3, reps: "12-15", rest: 45, notes: "Em pé no meio do crossover com manoplas altas, flexione imitando duplo bíceps." },
+  { muscle: "biceps", name: "Rosca 21 com Barra W", sets: 3, reps: "21 (7+7+7)", rest: 60, notes: "7 reps metade inferior, 7 reps metade superior, 7 reps completas. Queimação insana." },
+  { muscle: "biceps", name: "Rosca Inversa com Barra W (Antebraço)", sets: 3, reps: "12-15", rest: 45, notes: "Pegada pronada com palmas para baixo, constrói o braquiorradial do antebraço." },
+  { muscle: "biceps", name: "Flexão de Punho com Barra (Antebraço)", sets: 3, reps: "15-20", rest: 30, notes: "Apoie os antebraços no banco e dobre os punhos para cima, antebraço denso." },
+  { muscle: "biceps", name: "Extensão de Punho com Barra (Antebraço)", sets: 3, reps: "15-20", rest: 30, notes: "Palmas voltadas para baixo, erga as costas das mãos com controle." },
 
-  // TRÍCEPS
-  { muscle: "triceps", name: "Tríceps Corda na Polia", sets: 4, reps: "12-15", rest: 45, notes: "Abra a corda para fora no final do movimento para contrair tudo." },
-  { muscle: "triceps", name: "Tríceps Pulley Barra Reta / V", sets: 4, reps: "10-12", rest: 45, notes: "Cotovelos travados ao lado do corpo, empurre até estender." },
-  { muscle: "triceps", name: "Tríceps Francês com Halter", sets: 3, reps: "10-12", rest: 60, notes: "Segure o halter atrás da cabeça mantendo cotovelos fechados." },
-  { muscle: "triceps", name: "Tríceps Testa com Barra W", sets: 3, reps: "10-12", rest: 60, notes: "Deitado no banco, desça a barra controlando até a testa." },
-  { muscle: "triceps", name: "Mergulho no Banco (Paralelas)", sets: 3, reps: "12-15", rest: 60, notes: "Mãos apoiadas no banco, desça o corpo rente e empurre com os braços." },
+  // ================= TRÍCEPS =================
+  { muscle: "triceps", name: "Tríceps Corda na Polia", sets: 4, reps: "12-15", rest: 45, notes: "Abra a corda para fora no final do movimento para contrair a cabeça lateral." },
+  { muscle: "triceps", name: "Tríceps Pulley com Barra Reta", sets: 4, reps: "10-12", rest: 45, notes: "Cotovelos travados ao lado do tronco, empurre a barra estendendo totalmente." },
+  { muscle: "triceps", name: "Tríceps Pulley com Barra V", sets: 3, reps: "10-12", rest: 45, notes: "Pegada semi-neutra ergonômica que protege o punho e permite boa carga." },
+  { muscle: "triceps", name: "Tríceps Testa com Barra W", sets: 4, reps: "10-12", rest: 60, notes: "Deitado no banco, desça a barra controlando até a testa e estenda para cima." },
+  { muscle: "triceps", name: "Tríceps Testa com Halteres", sets: 3, reps: "10-12", rest: 60, notes: "Pegada neutra descendo ao lado das orelhas, excelente para ambas as cabeças." },
+  { muscle: "triceps", name: "Tríceps Francês com Halter", sets: 3, reps: "10-12", rest: 60, notes: "Segure o peso atrás da cabeça com cotovelos apontados para o teto." },
+  { muscle: "triceps", name: "Tríceps Francês na Polia com Corda", sets: 3, reps: "12-15", rest: 45, notes: "De costas para a polia média/baixa, estenda a corda à frente da cabeça." },
+  { muscle: "triceps", name: "Tríceps Coice com Halter (Kickback)", sets: 3, reps: "12-15", rest: 45, notes: "Tronco inclinado, estenda o braço para trás mantendo o cotovelo fixo e alto." },
+  { muscle: "triceps", name: "Tríceps Coice na Polia", sets: 3, reps: "12-15", rest: 45, notes: "Tensão constante no final da extensão com cabo na polia média/baixa." },
+  { muscle: "triceps", name: "Mergulho nas Barras Paralelas (Dips)", sets: 3, reps: "8-12", rest: 75, notes: "Mantenha o tronco reto na vertical para focar 100% no tríceps." },
+  { muscle: "triceps", name: "Mergulho no Banco (Bench Dips)", sets: 3, reps: "12-15", rest: 60, notes: "Mãos no banco atrás de você, desça o corpo perto do banco e empurre com os braços." },
+  { muscle: "triceps", name: "Supino Reto com Pegada Fechada", sets: 3, reps: "8-10", rest: 75, notes: "Mãos na largura dos ombros, cotovelos rentes ao tronco, excelente força no tríceps." },
+  { muscle: "triceps", name: "Flexão Diamante no Solo", sets: 3, reps: "10-12", rest: 60, notes: "Mãos unidas formando um losango no solo, queimação concentrada no tríceps." },
 
-  // PANTURRILHA
-  { muscle: "panturrilha", name: "Panturrilha em Pé na Máquina / Smith", sets: 4, reps: "15-20", rest: 45, notes: "Alongue bem o calcanhar na descida e suba na ponta máxima dos pés." },
-  { muscle: "panturrilha", name: "Panturrilha Sentado (Gêmeos)", sets: 4, reps: "15-20", rest: 45, notes: "Foco no músculo sóleo, faça o movimento completo e cadenciado." },
-  { muscle: "panturrilha", name: "Panturrilha no Leg Press", sets: 4, reps: "15-20", rest: 45, notes: "Apoie só as pontas dos pés na base inferior e empurre com os tornozelos." },
+  // ================= PANTURRILHA =================
+  { muscle: "panturrilha", name: "Panturrilha em Pé na Máquina / Smith", sets: 4, reps: "15-20", rest: 45, notes: "Alongue bem o calcanhar na descida e suba na ponta máxima dos pés segurando 1s." },
+  { muscle: "panturrilha", name: "Panturrilha Sentado na Máquina (Gêmeos)", sets: 4, reps: "15-20", rest: 45, notes: "Foco no músculo sóleo com joelhos a 90°. Movimento lento e cadenciado." },
+  { muscle: "panturrilha", name: "Panturrilha no Leg Press 45°", sets: 4, reps: "15-20", rest: 45, notes: "Apoie apenas a ponta dos pés na borda da plataforma e empurre com tornozelos." },
+  { muscle: "panturrilha", name: "Panturrilha Unilateral em Pé com Halter", sets: 3, reps: "15-20", rest: 30, notes: "Num degrau com um halter na mão, suba na ponta do pé de cada lado separadamente." },
+  { muscle: "panturrilha", name: "Panturrilha Burrinho (Donkey Calf Raise)", sets: 3, reps: "15-20", rest: 45, notes: "Tronco inclinado para frente, alongamento máximo das fibras dos gêmeos." },
 
-  // TRAPÉZIO
-  { muscle: "trapezio", name: "Encolhimento com Halteres", sets: 4, reps: "12-15", rest: 45, notes: "Erga os ombros em direção às orelhas, segure 1 segundo no topo." },
-  { muscle: "trapezio", name: "Encolhimento com Barra", sets: 4, reps: "12-15", rest: 45, notes: "Movimento puramente vertical para cima, sem girar os ombros." },
+  // ================= TRAPÉZIO =================
+  { muscle: "trapezio", name: "Encolhimento com Halteres", sets: 4, reps: "12-15", rest: 45, notes: "Erga os ombros em direção às orelhas, segure 1 segundo no topo sem girar." },
+  { muscle: "trapezio", name: "Encolhimento com Barra pela Frente", sets: 4, reps: "12-15", rest: 45, notes: "Movimento puramente vertical para cima com barra, ombros para cima e desça." },
+  { muscle: "trapezio", name: "Encolhimento com Barra por Trás", sets: 3, reps: "12-15", rest: 45, notes: "Barra nas costas (estilo Lee Haney), ativação intensa do miolo do trapézio." },
+  { muscle: "trapezio", name: "Encolhimento no Smith Machine", sets: 4, reps: "12-15", rest: 45, notes: "Segurança nos trilhos para isolar a contração vertical do trapézio." },
+  { muscle: "trapezio", name: "Encolhimento na Polia Baixa com Barra", sets: 3, reps: "15", rest: 45, notes: "Tensão constante nos cabos durante toda a subida dos ombros." },
 
-  // ABDÔMEN & CORE
-  { muscle: "abdomen", name: "Abdominal Supra no Solo", sets: 4, reps: "15-20", rest: 45, notes: "Solte todo o ar ao subir e aperte a musculatura abdominal." },
-  { muscle: "abdomen", name: "Prancha Abdominal", sets: 3, reps: "45-60 seg", rest: 45, notes: "Corpo reto como uma tábua, sem deixar o quadril cair." },
-  { muscle: "abdomen", name: "Elevação de Pernas na Barra Fixa", sets: 3, reps: "12-15", rest: 45, notes: "Suba os joelhos ou pernas até 90 graus sem balanço." },
-  { muscle: "abdomen", name: "Abdominal Infra no Banco", sets: 3, reps: "15-20", rest: 45, notes: "Tire o quadril levemente do banco no final da subida." },
-  { muscle: "abdomen", name: "Abdominal na Roda (Ab Wheel)", sets: 3, reps: "8-12", rest: 60, notes: "Role para frente com abdômen travado e retorne com força." }
+  // ================= ABDÔMEN & CORE =================
+  { muscle: "abdomen", name: "Abdominal Supra no Solo", sets: 4, reps: "15-20", rest: 45, notes: "Solte todo o ar ao subir e aperte a musculatura abdominal. Não puxe a nuca." },
+  { muscle: "abdomen", name: "Abdominal Supra no Banco Declinado", sets: 3, reps: "15-20", rest: 45, notes: "Pés presos, suba contraindo o abdômen sem descer até relaxar." },
+  { muscle: "abdomen", name: "Abdominal Infra no Solo", sets: 3, reps: "15-20", rest: 45, notes: "Mãos ao lado do quadril, erga as pernas e eleve levemente o quadril do solo." },
+  { muscle: "abdomen", name: "Abdominal Infra na Paralela (Capitão)", sets: 3, reps: "12-15", rest: 45, notes: "Antebraços apoiados no aparelho, puxe os joelhos até a linha do peito." },
+  { muscle: "abdomen", name: "Elevação de Pernas na Barra Fixa", sets: 3, reps: "12-15", rest: 45, notes: "Pendurado na barra, suba as pernas ou joelhos a 90° controlando o balanço." },
+  { muscle: "abdomen", name: "Abdominal na Polia Alta com Corda", sets: 4, reps: "15-20", rest: 45, notes: "Ajoelhado, segure a corda junto à testa e enrole o tronco espremendo a barriga." },
+  { muscle: "abdomen", name: "Prancha Isométrica Tradicional", sets: 3, reps: "45-60 seg", rest: 45, notes: "Corpo reto como uma tábua, glúteos e abdômen firmemente travados." },
+  { muscle: "abdomen", name: "Prancha Lateral (Oblíquos)", sets: 3, reps: "30-45 seg", rest: 30, notes: "Apoio no antebraço de lado, mantenha o quadril alto sem deixar cair." },
+  { muscle: "abdomen", name: "Abdominal Bicicleta", sets: 3, reps: "20 alternadas", rest: 45, notes: "Cotovelo toca o joelho oposto com rotação de tronco controlada." },
+  { muscle: "abdomen", name: "Abdominal Russo com Peso (Russian Twist)", sets: 3, reps: "20 alternadas", rest: 45, notes: "Sentado em V, gire o halter de um lado para o outro tocando o solo." },
+  { muscle: "abdomen", name: "Abdominal na Roda (Ab Wheel Rollout)", sets: 3, reps: "8-12", rest: 60, notes: "Role para frente com o core travado e retorne sem afundar a lombar." },
+  { muscle: "abdomen", name: "Vácuo Abdominal (Stomach Vacuum)", sets: 3, reps: "20-30 seg", rest: 45, notes: "Esvazie os pulmões e puxe o umbigo para dentro em direção à coluna para afinar a cintura." },
+  { muscle: "abdomen", name: "Prancha Hollow Body (Canoa)", sets: 3, reps: "30-45 seg", rest: 45, notes: "Deitado, lombar colada no chão, braços e pernas estendidos flutuando no ar." }
 ];
 
 // --- MODELOS DE PLANILHAS PRONTAS DE TREINO ---
@@ -3773,16 +3853,16 @@ function switchWorkoutSubtab(subtab) {
 // --- DETECT MUSCLE FOR EXERCISE ---
 function detectMuscleForExercise(name, notes) {
   const str = ((name || '') + ' ' + (notes || '')).toLowerCase();
-  if (str.match(/supino|crucifixo|peito|peitoral|flex[ãa]o|crossover|voador|peck deck/)) return 'peito';
-  if (str.match(/puxada|remada|barra fixa|pulldown|costas|dorsal|lombar|serrote/)) return 'costas';
-  if (str.match(/agachamento|leg press|extensora|hack|afundo|passada|quadr[íi]ceps/)) return 'pernas';
-  if (str.match(/flexora|stiff|posterior|isquiotibiais|pelvica|p[ée]lvica|gl[úu]teo|abdutora|adutora/)) return 'posterior';
-  if (str.match(/desenvolvimento|lateral|frontal|ombro|deltoide|face pull|manguito/)) return 'ombros';
-  if (str.match(/rosca|b[íi]ceps|antebra[çc]o|martelo|scott/)) return 'biceps';
-  if (str.match(/tr[íi]ceps|franc[êe]s|corda|testa|mergulho|coice/)) return 'triceps';
-  if (str.match(/abdominal|prancha|infra|supra|obl[íi]quo|abd[ôo]men/)) return 'abdomen';
-  if (str.match(/panturrilha|g[êe]meos|s[óo]leo/)) return 'panturrilha';
   if (str.match(/trap[ée]zio|encolhimento/)) return 'trapezio';
+  if (str.match(/panturrilha|g[êe]meos|s[óo]leo|burrinho/)) return 'panturrilha';
+  if (str.match(/abdominal|prancha|infra|supra|obl[íi]quo|abd[ôo]men|core|russian|ab wheel|v[áa]cuo|hollow/)) return 'abdomen';
+  if (str.match(/tr[íi]ceps|franc[êe]s|testa|mergulho|diamante/)) return 'triceps';
+  if (str.match(/rosca|b[íi]ceps|antebra[çc]o|martelo|scott|punho|spider|h[ée]rcules/)) return 'biceps';
+  if (str.match(/desenvolvimento|lateral|frontal|ombro|deltoide|face pull|manguito|arnold/)) return 'ombros';
+  if (str.match(/flexora|stiff|posterior|isquiotibiais|pelvica|p[ée]lvica|hip thrust|gl[úu]teo|abdutora|adutora|rdl|romeno|sum[ôo]/)) return 'posterior';
+  if (str.match(/agachamento|leg press|extensora|hack|afundo|passada|quadr[íi]ceps|sissy|goblet|b[úu]lgaro|zercher/)) return 'pernas';
+  if (str.match(/puxada|remada|barra fixa|chin-up|pulldown|costas|dorsal|lombar|serrote|cavalinho|t-bar|terra|deadlift|bom dia|good morning|hiperestens[ãa]o|meadows/)) return 'costas';
+  if (str.match(/supino|crucifixo|peito|peitoral|flex[ãa]o|crossover|voador|peck deck|pullover|svend/)) return 'peito';
   return 'peito';
 }
 
